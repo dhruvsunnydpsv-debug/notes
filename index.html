@@ -1,19 +1,3 @@
-If "nothing is happening" (not even an error message), it means the **website code cannot reach Supabase at all**.
-
-I found the exact error in the code I gave you earlier: **The Supabase URL had accidental spaces in it.**
-
-* **Bad:** `https://fl6k0avg h r7bknkzsfahy.supabase.co`
-* **Good:** `https://fl6k0avghr7bknkzsfahy.supabase.co`
-
-When the URL is broken, the button click just "dies" silently.
-
-### ⚡ The Fix (Copy & Paste This)
-
-I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so if anything goes wrong, a popup will tell you exactly why.
-
-**Overwrite your `index.html` on GitHub with this corrected version:**
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,7 +25,7 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
             <p class="text-slate-400 mb-6 text-sm">Authorized Personnel Only</p>
             <input type="email" id="email" placeholder="Email" class="w-full p-3 mb-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none text-white">
             <input type="password" id="pass" placeholder="Password" class="w-full p-3 mb-6 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none text-white">
-            <button id="login-btn" onclick="login()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition">Unlock System</button>
+            <button id="login-btn" onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition">Unlock System</button>
             <p id="auth-error" class="text-red-400 text-sm mt-4"></p>
         </div>
     </div>
@@ -128,39 +112,41 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        // I REMOVED THE SPACES IN THE URL BELOW - THIS WAS THE ISSUE
+        // CONFIGURATION
         const SUPABASE_URL = 'https://fl6k0avghr7bknkzsfahy.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304';
         const UNDETECTABLE_KEY = '135bce90-cb4b-4b54-83e8-5c8d9cf1dd65';
         
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // --- FIX: Renamed variable to 'sb' to prevent crash ---
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
         let currentPath = '/';
         let activeNoteId = null;
         let saveTimeout = null;
 
         // --- AUTH ---
-        async function login() {
+        async function handleLogin() {
             const btn = document.getElementById('login-btn');
             const errBox = document.getElementById('auth-error');
             
-            // UI Feedback
-            btn.innerText = "Checking...";
+            btn.innerText = "Verifying...";
             errBox.innerText = "";
             
             const email = document.getElementById('email').value;
             const password = document.getElementById('pass').value;
             
+            if(!email || !password) {
+                errBox.innerText = "Please enter email and password";
+                btn.innerText = "Unlock System";
+                return;
+            }
+
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error } = await sb.auth.signInWithPassword({ email, password });
                 
                 if (error) {
                     btn.innerText = "Unlock System";
-                    errBox.innerText = "Error: " + error.message;
-                    // Debug alert
-                    if(error.message === "Failed to fetch") {
-                        alert("Network Error: Could not reach Supabase. Check your internet or ad-blockers.");
-                    }
+                    errBox.innerText = "Login Failed: " + error.message;
                 } else {
                     btn.innerText = "Success!";
                     initApp();
@@ -168,14 +154,13 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
             } catch (e) {
                 btn.innerText = "Unlock System";
                 errBox.innerText = "System Error: " + e.message;
-                alert("Critical Code Error: " + e.message);
             }
         }
         
-        async function logout() { await supabase.auth.signOut(); location.reload(); }
+        async function logout() { await sb.auth.signOut(); location.reload(); }
         
         // Auto-login check
-        supabase.auth.getSession().then(({ data: { session } }) => { 
+        sb.auth.getSession().then(({ data: { session } }) => { 
             if (session) initApp(); 
         });
 
@@ -195,11 +180,11 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
 
         // --- FILES LOGIC ---
         async function loadFiles() {
-            const { data, error } = await supabase.storage.from('files').list(currentPath === '/' ? '' : currentPath);
+            const { data, error } = await sb.storage.from('files').list(currentPath === '/' ? '' : currentPath);
             const list = document.getElementById('file-list');
             list.innerHTML = '';
             
-            if (error) { console.error(error); return; }
+            if (error) { console.error("File Error:", error); return; }
 
             if(currentPath !== '/') {
                 list.innerHTML += `<div onclick="goUp()" class="glass p-4 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800 transition"><i class="ri-arrow-go-back-line text-3xl text-slate-500"></i><span class="text-xs mt-2 text-slate-400">Back</span></div>`;
@@ -208,7 +193,6 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
             if(data) {
                 data.forEach(item => {
                     const isFolder = !item.metadata;
-                    // Don't show the .keep placeholder file
                     if(item.name === '.keep') return;
                     
                     list.innerHTML += `
@@ -231,9 +215,8 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
         async function createFolder() {
             const name = prompt("Folder Name:");
             if(!name) return;
-            // Create a placeholder file to 'create' the folder
             const path = currentPath === '/' ? `${name}/.keep` : `${currentPath}/${name}/.keep`;
-            await supabase.storage.from('files').upload(path, new Blob(['']));
+            await sb.storage.from('files').upload(path, new Blob(['']));
             loadFiles();
         }
 
@@ -242,7 +225,7 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
             if(!file) return;
             showLoader(true, "Uploading...");
             const path = currentPath === '/' ? file.name : `${currentPath}/${file.name}`;
-            await supabase.storage.from('files').upload(path, file);
+            await sb.storage.from('files').upload(path, file);
             showLoader(false);
             loadFiles();
         }
@@ -250,20 +233,20 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
         async function deleteFile(name) {
             if(!confirm("Delete file?")) return;
             const path = currentPath === '/' ? name : `${currentPath}/${name}`;
-            await supabase.storage.from('files').remove([path]);
+            await sb.storage.from('files').remove([path]);
             loadFiles();
         }
 
         async function downloadFile(name) {
             const path = currentPath === '/' ? name : `${currentPath}/${name}`;
-            const { data } = supabase.storage.from('files').getPublicUrl(path);
+            const { data } = sb.storage.from('files').getPublicUrl(path);
             window.open(data.publicUrl, '_blank');
         }
 
         // --- NOTES LOGIC ---
         async function loadNotes() {
-            const { data, error } = await supabase.from('notes').select('*').order('created_at', { ascending: false });
-            if (error) { console.error(error); return; }
+            const { data, error } = await sb.from('notes').select('*').order('created_at', { ascending: false });
+            if (error) { console.error("Notes Error:", error); return; }
             
             const list = document.getElementById('notes-list');
             list.innerHTML = data.map(n => `
@@ -275,13 +258,13 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
         }
 
         async function createNewNote() {
-            const { data } = await supabase.from('notes').insert([{ title: 'Untitled Note', content: '', folder: '/' }]).select();
+            const { data } = await sb.from('notes').insert([{ title: 'Untitled Note', content: '', folder: '/' }]).select();
             if(data) { await loadNotes(); openNote(data[0].id); }
         }
 
         function openNote(id) {
             activeNoteId = id;
-            supabase.from('notes').select('*').eq('id', id).single().then(({data}) => {
+            sb.from('notes').select('*').eq('id', id).single().then(({data}) => {
                 document.getElementById('editor-empty').classList.add('hidden');
                 document.getElementById('editor-main').classList.remove('hidden');
                 document.getElementById('editor-main').classList.add('flex');
@@ -297,7 +280,7 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
             saveTimeout = setTimeout(async () => {
                 const title = document.getElementById('note-title').value;
                 const content = document.getElementById('note-content').value;
-                await supabase.from('notes').update({ title, content }).eq('id', activeNoteId);
+                await sb.from('notes').update({ title, content }).eq('id', activeNoteId);
                 document.getElementById('save-status').innerText = "Saved";
                 loadNotes(); 
             }, 1000);
@@ -305,7 +288,7 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
 
         async function deleteCurrentNote() {
             if(confirm("Delete this note?")) {
-                await supabase.from('notes').delete().eq('id', activeNoteId);
+                await sb.from('notes').delete().eq('id', activeNoteId);
                 activeNoteId = null;
                 document.getElementById('editor-main').classList.add('hidden');
                 document.getElementById('editor-empty').classList.remove('hidden');
@@ -345,8 +328,8 @@ I have fixed the URL, added your AI key, and added a **"Debug Alert"** system so
             document.getElementById('loader').classList.toggle('hidden', !show);
             document.getElementById('loader-text').innerText = text;
         }
+
+        console.log("System Loaded: Ready for login");
     </script>
 </body>
 </html>
-
-```
