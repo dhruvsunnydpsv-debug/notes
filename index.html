@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Vault | Verix</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        body { background: #0f172a; color: white; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div id="auth-screen" class="flex items-center justify-center min-h-screen p-4">
+        <div class="glass p-8 rounded-2xl w-full max-w-md shadow-2xl">
+            <h1 class="text-3xl font-bold mb-6 text-center text-blue-400">🔒 Vault Access</h1>
+            <input type="email" id="email" placeholder="Email" class="w-full p-3 mb-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none">
+            <input type="password" id="pass" placeholder="Password" class="w-full p-3 mb-6 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-bold transition duration-200">Unlock Vault</button>
+            <p id="auth-error" class="text-red-400 text-sm mt-4 text-center"></p>
+        </div>
+    </div>
+
+    <div id="app-screen" class="hidden container mx-auto px-4 py-8">
+        <header class="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
+            <h1 class="text-3xl font-bold text-blue-400">☁️ My Private Drive</h1>
+            <button onclick="logout()" class="text-slate-400 hover:text-white transition">Sign Out</button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <section class="glass p-6 rounded-2xl h-fit">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">📝 Personal Notes</h2>
+                <textarea id="noteText" rows="4" class="w-full bg-slate-800 p-4 rounded-xl border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none mb-4 resize-none" placeholder="Type a note..."></textarea>
+                <button onclick="saveNote()" id="noteBtn" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-semibold transition">Save Note</button>
+                <div id="notesList" class="mt-8 space-y-4 max-h-[400px] overflow-y-auto pr-2"></div>
+            </section>
+
+            <section class="glass p-6 rounded-2xl h-fit">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">📂 Cloud Files</h2>
+                <div class="bg-slate-800 p-4 rounded-xl border border-dashed border-slate-600 mb-6 text-center">
+                    <input type="file" id="fileInput" class="hidden">
+                    <label for="fileInput" class="cursor-pointer text-blue-400 hover:text-blue-300 transition block">
+                        Click to select a file
+                    </label>
+                    <button onclick="uploadFile()" id="upBtn" class="mt-4 bg-green-600 hover:bg-green-700 px-8 py-2 rounded-lg font-semibold transition">Upload</button>
+                </div>
+                <div id="fileList" class="space-y-3"></div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURATION
+        const SUPABASE_URL = 'https://fl6k0avg h r7bknkzsfahy.supabase.co'; // Your specific project URL
+        const SUPABASE_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // AUTHENTICATION LOGIC
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('pass').value;
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) document.getElementById('auth-error').innerText = error.message;
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+        }
+
+        supabase.auth.onAuthStateChanged((event, session) => {
+            if (session) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                loadData();
+            } else {
+                document.getElementById('auth-screen').classList.remove('hidden');
+                document.getElementById('app-screen').classList.add('hidden');
+            }
+        });
+
+        // DATA LOADING
+        function loadData() {
+            loadNotes();
+            loadFiles();
+        }
+
+        // NOTES LOGIC
+        async function saveNote() {
+            const content = document.getElementById('noteText').value;
+            if (!content) return;
+            const btn = document.getElementById('noteBtn');
+            btn.innerText = "Saving...";
+            await supabase.from('notes').insert([{ content }]);
+            document.getElementById('noteText').value = '';
+            btn.innerText = "Save Note";
+            loadNotes();
+        }
+
+        async function loadNotes() {
+            const { data } = await supabase.from('notes').select('*').order('created_at', { ascending: false });
+            const list = document.getElementById('notesList');
+            list.innerHTML = data.length ? data.map(n => `
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 group flex justify-between">
+                    <p class="text-slate-200">${n.content}</p>
+                    <button onclick="deleteNote('${n.id}')" class="text-slate-500 hover:text-red-400 transition">🗑️</button>
+                </div>
+            `).join('') : '<p class="text-slate-500 italic">No notes saved yet.</p>';
+        }
+
+        async function deleteNote(id) {
+            await supabase.from('notes').delete().eq('id', id);
+            loadNotes();
+        }
+
+        // FILES LOGIC
+        async function uploadFile() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) return;
+            const btn = document.getElementById('upBtn');
+            btn.innerText = "Uploading...";
+            const fileName = `${Date.now()}-${file.name}`;
+            const { error } = await supabase.storage.from('files').upload(fileName, file);
+            if (error) alert(error.message);
+            btn.innerText = "Upload";
+            loadFiles();
+        }
+
+        async function loadFiles() {
+            const { data, error } = await supabase.storage.from('files').list();
+            const list = document.getElementById('fileList');
+            if (error) return;
+            list.innerHTML = data.length ? data.map(f => {
+                const { data: urlData } = supabase.storage.from('files').getPublicUrl(f.name);
+                return `
+                <div class="flex justify-between items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                    <a href="${urlData.publicUrl}" target="_blank" class="text-blue-400 hover:underline truncate mr-4">${f.name}</a>
+                    <button onclick="deleteFile('${f.name}')" class="text-slate-500 hover:text-red-400 transition">🗑️</button>
+                </div>`;
+            }).join('') : '<p class="text-slate-500 italic">No files uploaded yet.</p>';
+        }
+
+        async function deleteFile(name) {
+            await supabase.storage.from('files').remove([name]);
+            loadFiles();
+        }
+    </script>
+</body>
+</html>
