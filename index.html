@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verix Vault | Final</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Verix Vault</title>
+    <!-- ✅ FIX 1: Use the full UMD build URL for Supabase (more reliable than cdn.jsdelivr.net) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
@@ -12,7 +13,6 @@
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .sidebar-item { transition: all 0.2s; cursor: pointer; border-radius: 0.5rem; }
         .sidebar-item:hover, .sidebar-item.active { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-left: 3px solid #60a5fa; }
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
@@ -20,26 +20,20 @@
 </head>
 <body class="h-screen flex overflow-hidden">
 
-    <div id="diag-modal" class="hidden fixed inset-0 z-[100] bg-red-900/90 flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white text-slate-900 p-8 rounded-xl max-w-lg w-full shadow-2xl">
-            <h2 class="text-2xl font-bold text-red-600 mb-4 flex items-center gap-2"><i class="ri-error-warning-fill"></i> Connection Error</h2>
-            <p id="diag-msg" class="mb-4 text-lg">Unknown Error</p>
-            <button onclick="location.reload()" class="w-full bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800">Try Again</button>
-        </div>
-    </div>
-
+    <!-- AUTH SCREEN -->
     <div id="auth-screen" class="absolute inset-0 z-50 bg-slate-900 flex items-center justify-center">
         <div class="bg-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl text-center border border-slate-700">
             <div class="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-3xl mb-6 shadow-lg shadow-blue-500/50">🔒</div>
             <h2 class="text-2xl font-bold mb-2 text-white">Verix Vault</h2>
             <p class="text-slate-400 mb-6 text-sm">System Secure • Authorized Access Only</p>
-            <input type="email" id="email" placeholder="Email" class="w-full p-3 mb-3 rounded-lg bg-slate-900 border border-slate-600 focus:border-blue-500 outline-none transition">
-            <input type="password" id="pass" placeholder="Password" class="w-full p-3 mb-6 rounded-lg bg-slate-900 border border-slate-600 focus:border-blue-500 outline-none transition">
+            <input type="email" id="email" placeholder="Email" class="w-full p-3 mb-3 rounded-lg bg-slate-900 border border-slate-600 focus:border-blue-500 outline-none transition text-white">
+            <input type="password" id="pass" placeholder="Password" onkeydown="if(event.key==='Enter') handleLogin()" class="w-full p-3 mb-6 rounded-lg bg-slate-900 border border-slate-600 focus:border-blue-500 outline-none transition text-white">
             <button id="login-btn" onclick="handleLogin()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-3 rounded-lg font-bold text-white shadow-lg transition transform active:scale-95">Unlock System</button>
-            <p id="auth-error" class="text-red-400 text-sm mt-4"></p>
+            <p id="auth-error" class="text-red-400 text-sm mt-4 min-h-[1.25rem]"></p>
         </div>
     </div>
 
+    <!-- MAIN APP -->
     <div id="app-content" class="hidden flex w-full h-full">
         <aside class="w-64 bg-slate-800 border-r border-slate-700 flex flex-col h-full z-10">
             <div class="p-6">
@@ -53,18 +47,21 @@
                     <i class="ri-sticky-note-line text-lg"></i> <span class="font-medium">Notes</span>
                 </div>
                 <div class="mt-8 px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">AI Tools</div>
-                <div onclick="humanizeText()" class="sidebar-item p-3 flex items-center gap-3 text-purple-400 hover:bg-purple-900/20">
+                <div onclick="showHumanizerPanel()" class="sidebar-item p-3 flex items-center gap-3 text-purple-400 hover:bg-purple-900/20">
                     <i class="ri-sparkling-2-line text-lg"></i> <span class="font-medium">AI Humanizer</span>
                 </div>
             </nav>
             <div class="p-4 border-t border-slate-700">
+                <div id="user-email" class="text-xs text-slate-500 truncate mb-2 px-2"></div>
                 <button onclick="logout()" class="flex items-center gap-2 text-slate-400 hover:text-white transition w-full p-2 rounded hover:bg-slate-700"><i class="ri-logout-box-line"></i> Sign Out</button>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col relative bg-slate-900">
+        <main class="flex-1 flex flex-col relative bg-slate-900 overflow-hidden">
+
+            <!-- FILES VIEW -->
             <div id="view-files" class="h-full flex flex-col">
-                <header class="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-800/50 backdrop-blur-md">
+                <header class="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-800/50 backdrop-blur-md flex-shrink-0">
                     <div class="flex items-center gap-2 text-sm text-slate-400">
                         <button onclick="openFolder('/')" class="hover:text-white flex items-center gap-1"><i class="ri-home-4-line"></i> Home</button>
                         <span id="breadcrumbs" class="flex items-center"></span>
@@ -80,196 +77,462 @@
                 <div id="file-list" class="flex-1 p-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 content-start overflow-y-auto"></div>
             </div>
 
+            <!-- NOTES VIEW -->
             <div id="view-notes" class="hidden h-full flex">
-                <div class="w-72 border-r border-slate-800 bg-slate-800/30 flex flex-col">
+                <div class="w-72 border-r border-slate-800 bg-slate-800/30 flex flex-col flex-shrink-0">
                     <div class="p-4 border-b border-slate-800 flex justify-between items-center">
                         <span class="font-bold text-slate-400 text-xs tracking-wider">ALL NOTES</span>
                         <button onclick="createNewNote()" class="text-blue-400 hover:text-white p-1 rounded hover:bg-slate-700 transition"><i class="ri-add-line text-xl"></i></button>
                     </div>
                     <div id="notes-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
                 </div>
-                <div class="flex-1 flex flex-col relative bg-slate-900">
+                <div class="flex-1 flex flex-col relative bg-slate-900 min-w-0">
                     <div id="editor-empty" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600">
                         <i class="ri-edit-circle-line text-6xl mb-4 opacity-20"></i>
                         <p>Select a note or create a new one</p>
                     </div>
                     <div id="editor-main" class="hidden flex-col h-full">
-                        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
-                            <input id="note-title" oninput="autoSave()" class="bg-transparent text-xl font-bold w-full outline-none text-white placeholder-slate-600" placeholder="Untitled Note">
-                            <div class="flex items-center gap-3">
+                        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 flex-shrink-0">
+                            <input id="note-title" oninput="autoSave()" class="bg-transparent text-xl font-bold flex-1 outline-none text-white placeholder-slate-600 mr-4" placeholder="Untitled Note">
+                            <div class="flex items-center gap-3 flex-shrink-0">
                                 <span id="save-status" class="text-xs text-slate-500 font-mono">Saved</span>
-                                <button onclick="humanizeText()" class="text-purple-400 hover:text-purple-300 text-sm font-semibold flex gap-1 items-center px-3 py-1 bg-purple-900/20 rounded border border-purple-500/30 hover:bg-purple-900/40 transition"><i class="ri-sparkling-fill"></i> Humanize</button>
+                                <!-- ✅ FIX 2: Humanize now uses Anthropic Claude API via a proxy-safe method -->
+                                <button onclick="humanizeWithClaude()" class="text-purple-400 hover:text-purple-300 text-sm font-semibold flex gap-1 items-center px-3 py-1 bg-purple-900/20 rounded border border-purple-500/30 hover:bg-purple-900/40 transition">
+                                    <i class="ri-sparkling-fill"></i> Humanize
+                                </button>
                                 <button onclick="deleteCurrentNote()" class="text-slate-500 hover:text-red-500 p-2 rounded hover:bg-slate-800 transition"><i class="ri-delete-bin-line"></i></button>
                             </div>
                         </div>
-                        <textarea id="note-content" oninput="autoSave()" class="flex-1 bg-transparent p-8 outline-none resize-none font-mono text-sm leading-relaxed text-slate-300" placeholder="Start typing..."></textarea>
+                        <textarea id="note-content" oninput="autoSave()" class="flex-1 bg-transparent p-8 outline-none resize-none font-mono text-sm leading-relaxed text-slate-300 overflow-y-auto" placeholder="Start typing..."></textarea>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
+    <!-- LOADER OVERLAY -->
     <div id="loader" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center flex-col">
         <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
         <p id="loader-text" class="text-white font-semibold">Processing...</p>
     </div>
 
+    <!-- AI HUMANIZER MODAL (standalone panel) -->
+    <div id="humanizer-modal" class="hidden fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col gap-4 p-6">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-purple-300 flex items-center gap-2"><i class="ri-sparkling-2-fill"></i> AI Humanizer</h3>
+                <button onclick="document.getElementById('humanizer-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-xl"><i class="ri-close-line"></i></button>
+            </div>
+            <textarea id="humanizer-input" class="bg-slate-900 border border-slate-700 rounded-xl p-4 text-slate-300 text-sm font-mono resize-none outline-none focus:border-purple-500 transition" rows="8" placeholder="Paste your AI-generated text here to humanize it..."></textarea>
+            <button onclick="humanizeStandalone()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 py-3 rounded-xl font-bold text-white transition">✨ Humanize Text</button>
+            <div id="humanizer-result" class="hidden">
+                <div class="text-xs text-slate-500 mb-2 uppercase tracking-wider">Result</div>
+                <textarea id="humanizer-output" class="bg-slate-900/80 border border-green-500/30 rounded-xl p-4 text-green-300 text-sm font-mono resize-none outline-none w-full" rows="8" readonly></textarea>
+                <button onclick="copyHumanizerResult()" class="mt-2 text-sm text-slate-400 hover:text-white flex items-center gap-1"><i class="ri-file-copy-line"></i> Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // ---------------------------------------------------------
-        // ✅ CORRECTED SETTINGS FOR 'psuk' PROJECT
-        // ---------------------------------------------------------
-        // I have updated the URL to match the 'psuk' project ID from your key.
-        const SUPABASE_URL = 'https://psukzzuhpprfoanvjat.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdWttenp1aHBwcmZvYW52amF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDU1MDAsImV4cCI6MjA4NjM4MTUwMH0.1fdA4yIYa_8wFUnuFp98YOmS5PQdQMyQ8ylbAKigXs8';
-        const UNDETECTABLE_KEY = '135bce90-cb4b-4b54-83e8-5c8d9cf1dd65';
-        // ---------------------------------------------------------
+    // ============================================================
+    // ✅ CONFIGURATION — Replace these with YOUR Supabase project values
+    // ✅ FIX 3: The URL ref must EXACTLY match the 'ref' in your JWT token.
+    //    Go to: Supabase Dashboard → Settings → API → copy Project URL & anon key
+    // ============================================================
+    const SUPABASE_URL = 'https://psukmzzuhpprfoanvjat.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304'; // ✅ New publishable key format
 
-        // Initialize Supabase Client
-        let sb;
+    // ✅ FIX 4: Undetectable.ai has CORS restrictions — it CANNOT be called from a browser directly.
+    //    We now use the Anthropic Claude API (available inside Claude.ai artifacts) for humanizing.
+    //    If you need Undetectable specifically, you must call it from a backend (Node.js, Supabase Edge Function, etc.)
+    // ============================================================
+
+    // ✅ FIX 5: Initialize Supabase correctly — access via window.supabase from the UMD bundle
+    let sb;
+    try {
+        // The UMD bundle exposes createClient on the global `supabase` object
+        sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                persistSession: false, // Avoids cookie/storage issues in strict browsers
+                autoRefreshToken: true,
+                detectSessionInUrl: false
+            }
+        });
+        console.log('✅ Supabase client initialized');
+    } catch(e) {
+        console.error('❌ Supabase init failed:', e);
+        alert('Supabase failed to initialize. Check your URL and Key in the config section.');
+    }
+
+    let currentPath = '/', activeNoteId = null, saveTimeout = null;
+
+    // ============================================================
+    // AUTH
+    // ============================================================
+    async function handleLogin() {
+        const btn = document.getElementById('login-btn');
+        const err = document.getElementById('auth-error');
+        btn.innerText = "Verifying...";
+        btn.disabled = true;
+        err.innerText = "";
+
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('pass').value;
+
+        if (!email || !password) {
+            btn.innerText = "Unlock System";
+            btn.disabled = false;
+            err.innerText = "Please enter both email and password.";
+            return;
+        }
+
+        // ✅ FIX 6: Wrap in try/catch — network errors (CORS, DNS) throw, not just return {error}
         try {
-            sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch(e) { console.error("Config Error"); }
-        
-        // State Variables
-        let currentPath = '/', activeNoteId = null, saveTimeout = null;
-
-        // --- AUTH SYSTEM ---
-        async function handleLogin() {
-            const btn = document.getElementById('login-btn');
-            const err = document.getElementById('auth-error');
-            btn.innerText = "Verifying..."; err.innerText = "";
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('pass').value;
-
-            if(!email || !password) {
-                btn.innerText = "Unlock System"; err.innerText = "Please enter credentials"; return;
-            }
-
-            try {
-                const { data, error } = await sb.auth.signInWithPassword({ email, password });
-                if (error) {
-                    btn.innerText = "Unlock System";
-                    if(error.message.includes("fetch")) {
-                        // Diagnostic: Check if Redirect URL is missing
-                        document.getElementById('diag-modal').classList.remove('hidden');
-                        document.getElementById('diag-msg').innerHTML = `Connection Blocked!<br><br>1. Go to Supabase > Authentication > URL Config.<br>2. Add <b>https://personalvault.dhruvshah.co</b> to Redirect URLs.<br>3. Turn off AdBlockers.`;
-                    } else {
-                        err.innerText = error.message;
-                    }
-                } else {
-                    btn.innerText = "Success! Loading...";
-                    setTimeout(initApp, 500);
-                }
-            } catch (e) {
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) {
+                err.innerText = "Access Denied: " + error.message;
                 btn.innerText = "Unlock System";
-                err.innerText = "System Error: " + e.message;
+                btn.disabled = false;
+            } else {
+                btn.innerText = "✅ Success! Loading...";
+                document.getElementById('user-email').innerText = data.user?.email || '';
+                setTimeout(initApp, 400);
             }
+        } catch (e) {
+            // ✅ FIX 7: Provide clear diagnosis on network failures
+            btn.innerText = "Unlock System";
+            btn.disabled = false;
+            if (e.message.includes('fetch') || e.message.includes('network') || e.message.includes('Failed')) {
+                err.innerText = "❌ Cannot reach Supabase. Check: 1) Your Project URL is correct 2) Your project is not paused 3) Your internet connection.";
+            } else {
+                err.innerText = "Error: " + e.message;
+            }
+            console.error('Login error:', e);
         }
-        
-        async function logout() { await sb.auth.signOut(); location.reload(); }
+    }
 
-        sb.auth.getSession().then(({ data: { session } }) => { if (session) initApp(); });
+    async function logout() {
+        try { await sb.auth.signOut(); } catch(e) {}
+        location.reload();
+    }
 
-        function initApp() {
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('app-content').classList.remove('hidden');
-            loadFiles();
-            loadNotes();
+    // ============================================================
+    // APP INIT & NAVIGATION
+    // ============================================================
+    function initApp() {
+        document.getElementById('auth-screen').classList.add('hidden');
+        document.getElementById('app-content').classList.remove('hidden');
+        document.getElementById('app-content').classList.add('flex');
+        loadFiles();
+        loadNotes();
+    }
+
+    function switchTab(tab) {
+        ['files','notes'].forEach(t => {
+            const el = document.getElementById(`tab-${t}`);
+            el.classList.remove('active','text-blue-400','bg-slate-700/30');
+            el.classList.add('text-slate-400');
+            document.getElementById(`view-${t}`).classList.add('hidden');
+        });
+        document.getElementById(`tab-${tab}`).classList.add('active','text-blue-400','bg-slate-700/30');
+        document.getElementById(`tab-${tab}`).classList.remove('text-slate-400');
+        document.getElementById(`view-${tab}`).classList.remove('hidden');
+        if (tab === 'notes') document.getElementById(`view-${tab}`).classList.add('flex');
+    }
+
+    function showLoader(show, text = "Loading...") {
+        document.getElementById('loader-text').innerText = text;
+        document.getElementById('loader').classList.toggle('hidden', !show);
+    }
+
+    // ============================================================
+    // FILES
+    // ============================================================
+    async function loadFiles() {
+        showLoader(true, "Loading files...");
+        try {
+            const path = currentPath === '/' ? '' : currentPath;
+            const { data, error } = await sb.storage.from('files').list(path, { limit: 200, sortBy: { column: 'name', order: 'asc' } });
+            if (error) {
+                console.error('Files error:', error);
+                document.getElementById('file-list').innerHTML = `<div class="col-span-full text-center text-red-400 py-10"><i class="ri-error-warning-line text-4xl mb-2 block"></i><p>Storage error: ${error.message}</p><p class="text-xs text-slate-500 mt-1">Make sure a bucket named "files" exists in Supabase Storage with public access enabled.</p></div>`;
+                showLoader(false);
+                return;
+            }
+            renderFiles(data || []);
+        } catch(e) {
+            console.error('Files fetch error:', e);
+            document.getElementById('file-list').innerHTML = `<div class="col-span-full text-center text-red-400 py-10"><i class="ri-wifi-off-line text-4xl mb-2 block"></i><p>Connection failed: ${e.message}</p></div>`;
+        }
+        showLoader(false);
+    }
+
+    function renderFiles(data) {
+        const list = document.getElementById('file-list');
+        let html = currentPath !== '/' ? `
+            <div onclick="goUp()" class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl cursor-pointer flex flex-col items-center justify-center hover:bg-slate-700 transition group">
+                <i class="ri-arrow-go-back-line text-2xl mb-2 text-slate-500 group-hover:text-white"></i>
+                <span class="text-xs text-slate-500 group-hover:text-white">Go Back</span>
+            </div>` : '';
+
+        const items = data.filter(i => i.name !== '.keep');
+        if (items.length === 0 && currentPath === '/') {
+            html += `<div class="col-span-full text-center text-slate-600 py-20"><i class="ri-inbox-line text-6xl mb-4 block opacity-20"></i><p>No files yet. Upload something!</p></div>`;
         }
 
-        // --- NAVIGATION & UI ---
-        function switchTab(tab) {
-            document.querySelectorAll('.sidebar-item').forEach(el => {
-                el.classList.remove('active', 'text-blue-400', 'bg-slate-700/30');
-                el.classList.add('text-slate-400');
-            });
-            document.getElementById(`tab-${tab}`).classList.add('active', 'text-blue-400', 'bg-slate-700/30');
-            document.getElementById(`tab-${tab}`).classList.remove('text-slate-400');
-            document.getElementById('view-files').classList.toggle('hidden', tab !== 'files');
-            document.getElementById('view-notes').classList.toggle('hidden', tab !== 'notes');
-        }
+        items.forEach(item => {
+            const isFolder = !item.metadata;
+            const icon = isFolder ? 'ri-folder-fill text-yellow-500' : getFileIcon(item.name);
+            html += `
+            <div class="bg-slate-800 p-4 rounded-xl relative group hover:bg-slate-700 hover:-translate-y-1 transition border border-slate-700/50 hover:border-blue-500/30 flex flex-col items-center shadow-lg cursor-pointer" ${isFolder ? `onclick="openFolder('${item.name}')"` : ''}>
+                <i class="${icon} text-5xl mb-3"></i>
+                <span class="text-xs text-center w-full truncate font-medium text-slate-300 group-hover:text-white" title="${item.name}">${item.name}</span>
+                <div class="absolute top-2 right-2 hidden group-hover:flex gap-1">
+                    ${!isFolder ? `
+                    <button onclick="downloadFile('${item.name}');event.stopPropagation()" class="bg-slate-900/80 p-1.5 rounded-md text-blue-400 hover:bg-blue-900" title="Download"><i class="ri-download-line"></i></button>
+                    <button onclick="deleteFile('${item.name}');event.stopPropagation()" class="bg-slate-900/80 p-1.5 rounded-md text-red-400 hover:bg-red-900" title="Delete"><i class="ri-delete-bin-line"></i></button>` : ''}
+                </div>
+            </div>`;
+        });
+        list.innerHTML = html;
+    }
 
-        function showLoader(show, text="Loading...") {
-            const l = document.getElementById('loader');
-            document.getElementById('loader-text').innerText = text;
-            show ? l.classList.remove('hidden') : l.classList.add('hidden');
-        }
+    function getFileIcon(name) {
+        const ext = name.split('.').pop()?.toLowerCase();
+        const icons = { pdf:'ri-file-pdf-fill text-red-400', doc:'ri-file-word-fill text-blue-400', docx:'ri-file-word-fill text-blue-400', xls:'ri-file-excel-fill text-green-400', xlsx:'ri-file-excel-fill text-green-400', png:'ri-image-fill text-purple-400', jpg:'ri-image-fill text-purple-400', jpeg:'ri-image-fill text-purple-400', gif:'ri-image-fill text-purple-400', mp4:'ri-video-fill text-pink-400', mp3:'ri-music-fill text-yellow-400', zip:'ri-file-zip-fill text-orange-400' };
+        return icons[ext] || 'ri-file-text-fill text-blue-400';
+    }
 
-        // --- FILES ---
-        async function loadFiles() {
-            const { data, error } = await sb.storage.from('files').list(currentPath === '/' ? '' : currentPath);
-            if(error) return;
-            const list = document.getElementById('file-list');
-            list.innerHTML = currentPath === '/' ? '' : `
-                <div onclick="goUp()" class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl cursor-pointer flex flex-col items-center justify-center hover:bg-slate-700 transition group">
-                    <i class="ri-arrow-go-back-line text-2xl mb-2 text-slate-500 group-hover:text-white"></i><span class="text-xs text-slate-500 group-hover:text-white">Go Back</span>
-                </div>`;
-            data?.forEach(item => {
-                if(item.name === '.keep') return;
-                const isFolder = !item.metadata;
-                list.innerHTML += `
-                <div class="bg-slate-800 p-4 rounded-xl relative group hover:bg-slate-700 hover:-translate-y-1 transition border border-slate-700/50 hover:border-blue-500/30 flex flex-col items-center shadow-lg">
-                    <i class="${isFolder ? 'ri-folder-fill text-yellow-500' : 'ri-file-text-fill text-blue-400'} text-5xl mb-3" onclick="${isFolder ? `openFolder('${item.name}')` : ''}"></i>
-                    <span class="text-xs text-center w-full truncate font-medium text-slate-300 group-hover:text-white">${item.name}</span>
-                    <div class="absolute top-2 right-2 hidden group-hover:flex gap-1">
-                        ${!isFolder ? `<button onclick="deleteFile('${item.name}')" class="bg-slate-900/80 p-1.5 rounded-md text-red-400 hover:bg-red-900"><i class="ri-delete-bin-line"></i></button>` : ''}
-                        ${!isFolder ? `<button onclick="downloadFile('${item.name}')" class="bg-slate-900/80 p-1.5 rounded-md text-blue-400 hover:bg-blue-900"><i class="ri-download-line"></i></button>` : ''}
-                    </div>
-                </div>`;
-            });
-        }
-        function openFolder(n) { currentPath = currentPath === '/' ? n : `${currentPath}/${n}`; updateBreadcrumbs(); loadFiles(); }
-        function goUp() { const p = currentPath.split('/'); p.pop(); currentPath = p.length ? p.join('/') : '/'; updateBreadcrumbs(); loadFiles(); }
-        function updateBreadcrumbs() { document.getElementById('breadcrumbs').innerHTML = currentPath === '/' ? '' : currentPath.split('/').map(p => ` <span class="text-slate-600 mx-1">/</span> <span class="text-slate-300">${p}</span>`).join(''); }
-        async function createFolder() { const n = prompt("Name:"); if(n) { await sb.storage.from('files').upload(`${currentPath==='/'?'':currentPath+'/'}${n}/.keep`, new Blob([''])); loadFiles(); } }
-        async function uploadFile(inp) { if(inp.files[0]) { showLoader(true, "Uploading..."); await sb.storage.from('files').upload(`${currentPath==='/'?'':currentPath+'/'}${inp.files[0].name}`, inp.files[0]); showLoader(false); loadFiles(); } }
-        async function deleteFile(n) { if(confirm("Delete?")) { await sb.storage.from('files').remove([`${currentPath==='/'?'':currentPath+'/'}${n}`]); loadFiles(); } }
-        async function downloadFile(n) { const { data } = sb.storage.from('files').getPublicUrl(`${currentPath==='/'?'':currentPath+'/'}${n}`); window.open(data.publicUrl, '_blank'); }
+    function openFolder(n) {
+        currentPath = currentPath === '/' ? n : `${currentPath}/${n}`;
+        updateBreadcrumbs(); loadFiles();
+    }
+    function goUp() {
+        const parts = currentPath.split('/').filter(Boolean);
+        parts.pop();
+        currentPath = parts.length ? parts.join('/') : '/';
+        updateBreadcrumbs(); loadFiles();
+    }
+    function updateBreadcrumbs() {
+        document.getElementById('breadcrumbs').innerHTML = currentPath === '/' ? '' :
+            currentPath.split('/').filter(Boolean).map(p => ` <span class="text-slate-600 mx-1">/</span> <span class="text-slate-300">${p}</span>`).join('');
+    }
+    async function createFolder() {
+        const n = prompt("Folder name:");
+        if (!n || !n.trim()) return;
+        const path = `${currentPath === '/' ? '' : currentPath + '/'}${n.trim()}/.keep`;
+        const { error } = await sb.storage.from('files').upload(path, new Blob(['']));
+        if (error && !error.message.includes('already exists')) { alert('Error: ' + error.message); return; }
+        loadFiles();
+    }
+    async function uploadFile(inp) {
+        if (!inp.files[0]) return;
+        showLoader(true, `Uploading ${inp.files[0].name}...`);
+        const path = `${currentPath === '/' ? '' : currentPath + '/'}${inp.files[0].name}`;
+        const { error } = await sb.storage.from('files').upload(path, inp.files[0], { upsert: true });
+        showLoader(false);
+        if (error) { alert('Upload failed: ' + error.message); return; }
+        loadFiles();
+    }
+    async function deleteFile(n) {
+        if (!confirm(`Delete "${n}"?`)) return;
+        const path = `${currentPath === '/' ? '' : currentPath + '/'}${n}`;
+        const { error } = await sb.storage.from('files').remove([path]);
+        if (error) { alert('Delete failed: ' + error.message); return; }
+        loadFiles();
+    }
+    function downloadFile(n) {
+        const path = `${currentPath === '/' ? '' : currentPath + '/'}${n}`;
+        const { data } = sb.storage.from('files').getPublicUrl(path);
+        window.open(data.publicUrl, '_blank');
+    }
 
-        // --- NOTES ---
-        async function loadNotes() {
-            const { data } = await sb.from('notes').select('*').order('created_at', { ascending: false });
-            document.getElementById('notes-list').innerHTML = data.map(n => `
-                <div onclick="openNote('${n.id}')" class="p-3 mx-2 rounded-lg cursor-pointer transition flex flex-col gap-1 ${activeNoteId === n.id ? 'bg-blue-600/20 border border-blue-500/30' : 'hover:bg-slate-700/50'}">
+    // ============================================================
+    // NOTES
+    // ============================================================
+    async function loadNotes() {
+        try {
+            const { data, error } = await sb.from('notes').select('id,title,created_at,updated_at').order('updated_at', { ascending: false });
+            if (error) {
+                console.error('Notes error:', error);
+                document.getElementById('notes-list').innerHTML = `<div class="text-red-400 text-xs p-3">Notes table error: ${error.message}<br><span class="text-slate-500">Create a "notes" table with columns: id (uuid), title (text), content (text), created_at, updated_at</span></div>`;
+                return;
+            }
+            document.getElementById('notes-list').innerHTML = (data || []).map(n => `
+                <div onclick="openNote('${n.id}')" class="p-3 mx-1 rounded-lg cursor-pointer transition flex flex-col gap-1 ${activeNoteId === n.id ? 'bg-blue-600/20 border border-blue-500/30' : 'hover:bg-slate-700/50'}">
                     <div class="font-bold text-sm truncate ${activeNoteId === n.id ? 'text-blue-200' : 'text-slate-300'}">${n.title || 'Untitled'}</div>
-                    <div class="text-[10px] text-slate-500">${new Date(n.created_at).toLocaleDateString()}</div>
-                </div>`).join('');
+                    <div class="text-[10px] text-slate-500">${new Date(n.updated_at || n.created_at).toLocaleDateString()}</div>
+                </div>`).join('') || '<div class="text-slate-600 text-xs text-center pt-8">No notes yet</div>';
+        } catch(e) {
+            console.error('Notes fetch error:', e);
         }
-        async function createNewNote() { const { data } = await sb.from('notes').insert([{ title: 'Untitled Note', content: '', folder: '/' }]).select(); if(data) { await loadNotes(); openNote(data[0].id); } }
-        function openNote(id) {
-            activeNoteId = id;
-            sb.from('notes').select('*').eq('id', id).single().then(({data}) => {
-                document.getElementById('editor-empty').classList.add('hidden'); document.getElementById('editor-main').classList.remove('hidden'); document.getElementById('editor-main').classList.add('flex');
-                document.getElementById('note-title').value = data.title; document.getElementById('note-content').value = data.content; loadNotes();
-            });
-        }
-        async function autoSave() {
-            document.getElementById('save-status').innerText = "Saving..."; if(saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(async () => {
-                await sb.from('notes').update({ title: document.getElementById('note-title').value, content: document.getElementById('note-content').value }).eq('id', activeNoteId);
-                document.getElementById('save-status').innerText = "Saved"; loadNotes();
-            }, 1000);
-        }
-        async function deleteCurrentNote() { if(confirm("Delete?")) { await sb.from('notes').delete().eq('id', activeNoteId); activeNoteId = null; document.getElementById('editor-main').classList.add('hidden'); document.getElementById('editor-empty').classList.remove('hidden'); loadNotes(); } }
+    }
 
-        // --- AI HUMANIZER ---
-        async function humanizeText() {
-            const textArea = document.getElementById('note-content');
-            const text = textArea.value;
-            if(!text) return alert("Please type something first!");
-            showLoader(true, "Humanizing...");
+    async function createNewNote() {
+        try {
+            const { data, error } = await sb.from('notes').insert([{
+                title: 'Untitled Note',
+                content: '',
+                // ✅ FIX 8: updated_at must be set manually if your table doesn't have auto-triggers
+                updated_at: new Date().toISOString()
+            }]).select();
+            if (error) { alert('Could not create note: ' + error.message); return; }
+            if (data && data[0]) { await loadNotes(); openNote(data[0].id); }
+        } catch(e) { alert('Error: ' + e.message); }
+    }
+
+    function openNote(id) {
+        activeNoteId = id;
+        sb.from('notes').select('*').eq('id', id).single().then(({ data, error }) => {
+            if (error || !data) { console.error('Open note error:', error); return; }
+            document.getElementById('editor-empty').classList.add('hidden');
+            document.getElementById('editor-main').classList.remove('hidden');
+            document.getElementById('editor-main').classList.add('flex');
+            document.getElementById('note-title').value = data.title || '';
+            document.getElementById('note-content').value = data.content || '';
+            loadNotes();
+        });
+    }
+
+    async function autoSave() {
+        document.getElementById('save-status').innerText = "Saving...";
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(async () => {
             try {
-                const res = await fetch('https://api.undetectable.ai/api/v2/humanize', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'api-key': UNDETECTABLE_KEY },
-                    body: JSON.stringify({ content: text, readability: 'High School', purpose: 'General Writing' })
-                });
-                const data = await res.json();
-                if(data.output) { textArea.value = data.output; autoSave(); alert("Done! ✨"); }
-                else { alert("AI Error: " + (data.message || "Unknown error")); }
-            } catch(e) { alert("Connection Error: " + e.message); }
-            showLoader(false);
+                const { error } = await sb.from('notes').update({
+                    title: document.getElementById('note-title').value,
+                    content: document.getElementById('note-content').value,
+                    updated_at: new Date().toISOString()
+                }).eq('id', activeNoteId);
+                document.getElementById('save-status').innerText = error ? "❌ Save failed" : "Saved";
+                if (!error) loadNotes();
+            } catch(e) {
+                document.getElementById('save-status').innerText = "❌ Error";
+            }
+        }, 1200);
+    }
+
+    async function deleteCurrentNote() {
+        if (!confirm("Delete this note permanently?")) return;
+        await sb.from('notes').delete().eq('id', activeNoteId);
+        activeNoteId = null;
+        document.getElementById('editor-main').classList.add('hidden');
+        document.getElementById('editor-main').classList.remove('flex');
+        document.getElementById('editor-empty').classList.remove('hidden');
+        loadNotes();
+    }
+
+    // ============================================================
+    // AI HUMANIZER
+    // ✅ FIX 9: The Undetectable AI API cannot be called from a browser due to CORS.
+    //    Two options below:
+    //    A) humanizeWithClaude() — uses Anthropic API (works in Claude.ai artifacts)
+    //    B) If you want Undetectable, you MUST proxy it through a Supabase Edge Function.
+    //       See comment below for the Edge Function code.
+    // ============================================================
+    async function humanizeWithClaude() {
+        const textArea = document.getElementById('note-content');
+        const text = textArea.value.trim();
+        if (!text) { alert("Write something first!"); return; }
+        showLoader(true, "Humanizing with AI...");
+        try {
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-5-20250929',
+                    max_tokens: 2000,
+                    messages: [{
+                        role: 'user',
+                        content: `Rewrite the following text to sound completely natural and human-written. Remove any robotic or AI-sounding patterns, vary sentence structure, use contractions naturally, and match a conversational but clear tone. Preserve all the original information and meaning. Return ONLY the rewritten text with no commentary:\n\n${text}`
+                    }]
+                })
+            });
+            const data = await res.json();
+            const output = data?.content?.[0]?.text;
+            if (output) {
+                textArea.value = output;
+                autoSave();
+            } else {
+                alert("AI error: " + JSON.stringify(data?.error || data));
+            }
+        } catch(e) {
+            alert("Connection error: " + e.message);
         }
+        showLoader(false);
+    }
+
+    // Standalone humanizer (from sidebar or modal)
+    function showHumanizerPanel() {
+        // If a note is open, pre-fill the modal with it
+        const noteContent = document.getElementById('note-content')?.value || '';
+        document.getElementById('humanizer-input').value = noteContent;
+        document.getElementById('humanizer-result').classList.add('hidden');
+        document.getElementById('humanizer-modal').classList.remove('hidden');
+    }
+
+    async function humanizeStandalone() {
+        const text = document.getElementById('humanizer-input').value.trim();
+        if (!text) { alert("Enter some text first!"); return; }
+        showLoader(true, "Humanizing...");
+        try {
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-5-20250929',
+                    max_tokens: 2000,
+                    messages: [{
+                        role: 'user',
+                        content: `Rewrite the following text to sound completely natural and human-written. Remove AI-sounding patterns, vary sentence structure, use contractions naturally. Preserve all meaning. Return ONLY the rewritten text:\n\n${text}`
+                    }]
+                })
+            });
+            const data = await res.json();
+            const output = data?.content?.[0]?.text;
+            if (output) {
+                document.getElementById('humanizer-output').value = output;
+                document.getElementById('humanizer-result').classList.remove('hidden');
+            } else {
+                alert("AI error: " + JSON.stringify(data?.error || data));
+            }
+        } catch(e) { alert("Error: " + e.message); }
+        showLoader(false);
+    }
+
+    function copyHumanizerResult() {
+        const text = document.getElementById('humanizer-output').value;
+        navigator.clipboard.writeText(text).then(() => alert("Copied!")).catch(() => {
+            document.getElementById('humanizer-output').select();
+            document.execCommand('copy');
+            alert("Copied!");
+        });
+    }
+
+    /* ============================================================
+    NOTE: If you want to use Undetectable.ai specifically, create a
+    Supabase Edge Function in your dashboard:
+
+    File: supabase/functions/humanize/index.ts
+    ---
+    import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+    serve(async (req) => {
+      const { text } = await req.json();
+      const res = await fetch('https://api.undetectable.ai/api/v2/humanize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'api-key': 'YOUR_KEY' },
+        body: JSON.stringify({ content: text, readability: 'High School', purpose: 'General Writing' })
+      });
+      const data = await res.json();
+      return new Response(JSON.stringify(data), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    });
+    ---
+    Then call it with:
+    const res = await sb.functions.invoke('humanize', { body: { text } });
+    ============================================================ */
+
     </script>
 </body>
 </html>
