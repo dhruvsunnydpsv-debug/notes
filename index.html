@@ -3,22 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verix Vault | Secure</title>
+    <title>Verix Vault | Final</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: #e2e8f0; font-family: ui-sans-serif, system-ui, sans-serif; }
+        body { background-color: #0f172a; color: #e2e8f0; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .sidebar-item { transition: all 0.2s; cursor: pointer; border-radius: 0.5rem; }
         .sidebar-item:hover, .sidebar-item.active { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-left: 3px solid #60a5fa; }
-        /* Custom Scrollbar */
+        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden">
+
+    <div id="diag-modal" class="hidden fixed inset-0 z-[100] bg-red-900/90 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white text-slate-900 p-8 rounded-xl max-w-lg w-full shadow-2xl">
+            <h2 class="text-2xl font-bold text-red-600 mb-4 flex items-center gap-2"><i class="ri-error-warning-fill"></i> Connection Error</h2>
+            <p id="diag-msg" class="mb-4 text-lg">Unknown Error</p>
+            <button onclick="location.reload()" class="w-full bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800">Try Again</button>
+        </div>
+    </div>
 
     <div id="auth-screen" class="absolute inset-0 z-50 bg-slate-900 flex items-center justify-center">
         <div class="bg-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl text-center border border-slate-700">
@@ -44,21 +52,17 @@
                 <div onclick="switchTab('notes')" id="tab-notes" class="sidebar-item p-3 flex items-center gap-3 text-slate-400">
                     <i class="ri-sticky-note-line text-lg"></i> <span class="font-medium">Notes</span>
                 </div>
-                
                 <div class="mt-8 px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">AI Tools</div>
                 <div onclick="humanizeText()" class="sidebar-item p-3 flex items-center gap-3 text-purple-400 hover:bg-purple-900/20">
                     <i class="ri-sparkling-2-line text-lg"></i> <span class="font-medium">AI Humanizer</span>
                 </div>
             </nav>
             <div class="p-4 border-t border-slate-700">
-                <button onclick="logout()" class="flex items-center gap-2 text-slate-400 hover:text-white transition w-full p-2 rounded hover:bg-slate-700">
-                    <i class="ri-logout-box-line"></i> Sign Out
-                </button>
+                <button onclick="logout()" class="flex items-center gap-2 text-slate-400 hover:text-white transition w-full p-2 rounded hover:bg-slate-700"><i class="ri-logout-box-line"></i> Sign Out</button>
             </div>
         </aside>
 
         <main class="flex-1 flex flex-col relative bg-slate-900">
-            
             <div id="view-files" class="h-full flex flex-col">
                 <header class="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-800/50 backdrop-blur-md">
                     <div class="flex items-center gap-2 text-sm text-slate-400">
@@ -73,9 +77,7 @@
                         </label>
                     </div>
                 </header>
-                
-                <div id="file-list" class="flex-1 p-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 content-start overflow-y-auto">
-                    </div>
+                <div id="file-list" class="flex-1 p-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 content-start overflow-y-auto"></div>
             </div>
 
             <div id="view-notes" class="hidden h-full flex">
@@ -86,21 +88,17 @@
                     </div>
                     <div id="notes-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
                 </div>
-                
                 <div class="flex-1 flex flex-col relative bg-slate-900">
                     <div id="editor-empty" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600">
                         <i class="ri-edit-circle-line text-6xl mb-4 opacity-20"></i>
                         <p>Select a note or create a new one</p>
                     </div>
-                    
                     <div id="editor-main" class="hidden flex-col h-full">
                         <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
                             <input id="note-title" oninput="autoSave()" class="bg-transparent text-xl font-bold w-full outline-none text-white placeholder-slate-600" placeholder="Untitled Note">
                             <div class="flex items-center gap-3">
                                 <span id="save-status" class="text-xs text-slate-500 font-mono">Saved</span>
-                                <button onclick="humanizeText()" class="text-purple-400 hover:text-purple-300 text-sm font-semibold flex gap-1 items-center px-3 py-1 bg-purple-900/20 rounded border border-purple-500/30 hover:bg-purple-900/40 transition">
-                                    <i class="ri-sparkling-fill"></i> Humanize
-                                </button>
+                                <button onclick="humanizeText()" class="text-purple-400 hover:text-purple-300 text-sm font-semibold flex gap-1 items-center px-3 py-1 bg-purple-900/20 rounded border border-purple-500/30 hover:bg-purple-900/40 transition"><i class="ri-sparkling-fill"></i> Humanize</button>
                                 <button onclick="deleteCurrentNote()" class="text-slate-500 hover:text-red-500 p-2 rounded hover:bg-slate-800 transition"><i class="ri-delete-bin-line"></i></button>
                             </div>
                         </div>
@@ -118,46 +116,45 @@
 
     <script>
         // ---------------------------------------------------------
-        // ✅ YOUR CREDENTIALS (NOW CORRECT)
+        // ✅ CORRECTED SETTINGS FOR 'psuk' PROJECT
         // ---------------------------------------------------------
-        const SUPABASE_URL = 'https://fl6k0avghr7bknkzsfahy.supabase.co';
+        // I have updated the URL to match the 'psuk' project ID from your key.
+        const SUPABASE_URL = 'https://psukzzuhpprfoanvjat.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdWttenp1aHBwcmZvYW52amF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDU1MDAsImV4cCI6MjA4NjM4MTUwMH0.1fdA4yIYa_8wFUnuFp98YOmS5PQdQMyQ8ylbAKigXs8';
         const UNDETECTABLE_KEY = '135bce90-cb4b-4b54-83e8-5c8d9cf1dd65';
         // ---------------------------------------------------------
 
         // Initialize Supabase Client
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let sb;
+        try {
+            sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch(e) { console.error("Config Error"); }
         
         // State Variables
-        let currentPath = '/';
-        let activeNoteId = null;
-        let saveTimeout = null;
+        let currentPath = '/', activeNoteId = null, saveTimeout = null;
 
         // --- AUTH SYSTEM ---
         async function handleLogin() {
             const btn = document.getElementById('login-btn');
             const err = document.getElementById('auth-error');
-            
-            btn.innerText = "Verifying..."; 
-            err.innerText = "";
-
+            btn.innerText = "Verifying..."; err.innerText = "";
             const email = document.getElementById('email').value;
             const password = document.getElementById('pass').value;
 
             if(!email || !password) {
-                btn.innerText = "Unlock System";
-                err.innerText = "Please enter email and password";
-                return;
+                btn.innerText = "Unlock System"; err.innerText = "Please enter credentials"; return;
             }
 
             try {
                 const { data, error } = await sb.auth.signInWithPassword({ email, password });
-                
                 if (error) {
                     btn.innerText = "Unlock System";
-                    err.innerText = "Access Denied: " + error.message;
                     if(error.message.includes("fetch")) {
-                        alert("Connection Blocked! 1. Check if 'https://personalvault.dhruvshah.co' is in Supabase Redirects. 2. Disable AdBlockers.");
+                        // Diagnostic: Check if Redirect URL is missing
+                        document.getElementById('diag-modal').classList.remove('hidden');
+                        document.getElementById('diag-msg').innerHTML = `Connection Blocked!<br><br>1. Go to Supabase > Authentication > URL Config.<br>2. Add <b>https://personalvault.dhruvshah.co</b> to Redirect URLs.<br>3. Turn off AdBlockers.`;
+                    } else {
+                        err.innerText = error.message;
                     }
                 } else {
                     btn.innerText = "Success! Loading...";
@@ -171,7 +168,6 @@
         
         async function logout() { await sb.auth.signOut(); location.reload(); }
 
-        // Check Session on Load
         sb.auth.getSession().then(({ data: { session } }) => { if (session) initApp(); });
 
         function initApp() {
@@ -181,16 +177,14 @@
             loadNotes();
         }
 
-        // --- NAVIGATION ---
+        // --- NAVIGATION & UI ---
         function switchTab(tab) {
             document.querySelectorAll('.sidebar-item').forEach(el => {
                 el.classList.remove('active', 'text-blue-400', 'bg-slate-700/30');
                 el.classList.add('text-slate-400');
             });
-            const activeBtn = document.getElementById(`tab-${tab}`);
-            activeBtn.classList.add('active', 'text-blue-400', 'bg-slate-700/30');
-            activeBtn.classList.remove('text-slate-400');
-
+            document.getElementById(`tab-${tab}`).classList.add('active', 'text-blue-400', 'bg-slate-700/30');
+            document.getElementById(`tab-${tab}`).classList.remove('text-slate-400');
             document.getElementById('view-files').classList.toggle('hidden', tab !== 'files');
             document.getElementById('view-notes').classList.toggle('hidden', tab !== 'notes');
         }
@@ -201,70 +195,38 @@
             show ? l.classList.remove('hidden') : l.classList.add('hidden');
         }
 
-        // --- FILE DRIVE SYSTEM ---
+        // --- FILES ---
         async function loadFiles() {
             const { data, error } = await sb.storage.from('files').list(currentPath === '/' ? '' : currentPath);
-            if(error) { console.error(error); return; }
-            
+            if(error) return;
             const list = document.getElementById('file-list');
-            // Back Button logic
             list.innerHTML = currentPath === '/' ? '' : `
                 <div onclick="goUp()" class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl cursor-pointer flex flex-col items-center justify-center hover:bg-slate-700 transition group">
-                    <i class="ri-arrow-go-back-line text-2xl mb-2 text-slate-500 group-hover:text-white"></i>
-                    <span class="text-xs text-slate-500 group-hover:text-white">Go Back</span>
+                    <i class="ri-arrow-go-back-line text-2xl mb-2 text-slate-500 group-hover:text-white"></i><span class="text-xs text-slate-500 group-hover:text-white">Go Back</span>
                 </div>`;
-            
             data?.forEach(item => {
-                if(item.name === '.keep') return; // Hide system files
+                if(item.name === '.keep') return;
                 const isFolder = !item.metadata;
-                
                 list.innerHTML += `
-                <div class="bg-slate-800 p-4 rounded-xl relative group hover:bg-slate-700 hover:-translate-y-1 transition duration-200 border border-slate-700/50 hover:border-blue-500/30 flex flex-col items-center shadow-lg">
-                    <i class="${isFolder ? 'ri-folder-fill text-yellow-500' : 'ri-file-text-fill text-blue-400'} text-5xl mb-3 drop-shadow-md" onclick="${isFolder ? `openFolder('${item.name}')` : ''}"></i>
+                <div class="bg-slate-800 p-4 rounded-xl relative group hover:bg-slate-700 hover:-translate-y-1 transition border border-slate-700/50 hover:border-blue-500/30 flex flex-col items-center shadow-lg">
+                    <i class="${isFolder ? 'ri-folder-fill text-yellow-500' : 'ri-file-text-fill text-blue-400'} text-5xl mb-3" onclick="${isFolder ? `openFolder('${item.name}')` : ''}"></i>
                     <span class="text-xs text-center w-full truncate font-medium text-slate-300 group-hover:text-white">${item.name}</span>
-                    
                     <div class="absolute top-2 right-2 hidden group-hover:flex gap-1">
-                        ${!isFolder ? `<button onclick="deleteFile('${item.name}')" class="bg-slate-900/80 p-1.5 rounded-md text-red-400 hover:text-red-200 hover:bg-red-900"><i class="ri-delete-bin-line"></i></button>` : ''}
-                        ${!isFolder ? `<button onclick="downloadFile('${item.name}')" class="bg-slate-900/80 p-1.5 rounded-md text-blue-400 hover:text-blue-200 hover:bg-blue-900"><i class="ri-download-line"></i></button>` : ''}
+                        ${!isFolder ? `<button onclick="deleteFile('${item.name}')" class="bg-slate-900/80 p-1.5 rounded-md text-red-400 hover:bg-red-900"><i class="ri-delete-bin-line"></i></button>` : ''}
+                        ${!isFolder ? `<button onclick="downloadFile('${item.name}')" class="bg-slate-900/80 p-1.5 rounded-md text-blue-400 hover:bg-blue-900"><i class="ri-download-line"></i></button>` : ''}
                     </div>
                 </div>`;
             });
         }
-
         function openFolder(n) { currentPath = currentPath === '/' ? n : `${currentPath}/${n}`; updateBreadcrumbs(); loadFiles(); }
         function goUp() { const p = currentPath.split('/'); p.pop(); currentPath = p.length ? p.join('/') : '/'; updateBreadcrumbs(); loadFiles(); }
-        function updateBreadcrumbs() { 
-            const parts = currentPath.split('/');
-            document.getElementById('breadcrumbs').innerHTML = currentPath === '/' ? '' : parts.map(p => ` <span class="text-slate-600 mx-1">/</span> <span class="text-slate-300">${p}</span>`).join(''); 
-        }
-        
-        async function createFolder() {
-            const name = prompt("Enter folder name:"); if(!name) return;
-            await sb.storage.from('files').upload(`${currentPath === '/' ? '' : currentPath + '/'}${name}/.keep`, new Blob(['']));
-            loadFiles();
-        }
-        
-        async function uploadFile(input) {
-            if(!input.files[0]) return;
-            const file = input.files[0];
-            showLoader(true, "Uploading...");
-            await sb.storage.from('files').upload(`${currentPath === '/' ? '' : currentPath + '/'}${file.name}`, file);
-            showLoader(false);
-            loadFiles();
-        }
+        function updateBreadcrumbs() { document.getElementById('breadcrumbs').innerHTML = currentPath === '/' ? '' : currentPath.split('/').map(p => ` <span class="text-slate-600 mx-1">/</span> <span class="text-slate-300">${p}</span>`).join(''); }
+        async function createFolder() { const n = prompt("Name:"); if(n) { await sb.storage.from('files').upload(`${currentPath==='/'?'':currentPath+'/'}${n}/.keep`, new Blob([''])); loadFiles(); } }
+        async function uploadFile(inp) { if(inp.files[0]) { showLoader(true, "Uploading..."); await sb.storage.from('files').upload(`${currentPath==='/'?'':currentPath+'/'}${inp.files[0].name}`, inp.files[0]); showLoader(false); loadFiles(); } }
+        async function deleteFile(n) { if(confirm("Delete?")) { await sb.storage.from('files').remove([`${currentPath==='/'?'':currentPath+'/'}${n}`]); loadFiles(); } }
+        async function downloadFile(n) { const { data } = sb.storage.from('files').getPublicUrl(`${currentPath==='/'?'':currentPath+'/'}${n}`); window.open(data.publicUrl, '_blank'); }
 
-        async function deleteFile(n) {
-            if(!confirm("Permanently delete this file?")) return;
-            await sb.storage.from('files').remove([`${currentPath === '/' ? '' : currentPath + '/'}${n}`]);
-            loadFiles();
-        }
-        
-        async function downloadFile(n) {
-            const { data } = sb.storage.from('files').getPublicUrl(`${currentPath === '/' ? '' : currentPath + '/'}${n}`);
-            window.open(data.publicUrl, '_blank');
-        }
-
-        // --- NOTE SYSTEM ---
+        // --- NOTES ---
         async function loadNotes() {
             const { data } = await sb.from('notes').select('*').order('created_at', { ascending: false });
             document.getElementById('notes-list').innerHTML = data.map(n => `
@@ -273,55 +235,29 @@
                     <div class="text-[10px] text-slate-500">${new Date(n.created_at).toLocaleDateString()}</div>
                 </div>`).join('');
         }
-
-        async function createNewNote() {
-            const { data } = await sb.from('notes').insert([{ title: 'Untitled Note', content: '', folder: '/' }]).select();
-            if(data) { await loadNotes(); openNote(data[0].id); }
-        }
-
+        async function createNewNote() { const { data } = await sb.from('notes').insert([{ title: 'Untitled Note', content: '', folder: '/' }]).select(); if(data) { await loadNotes(); openNote(data[0].id); } }
         function openNote(id) {
             activeNoteId = id;
             sb.from('notes').select('*').eq('id', id).single().then(({data}) => {
-                document.getElementById('editor-empty').classList.add('hidden');
-                document.getElementById('editor-main').classList.remove('hidden');
-                document.getElementById('editor-main').classList.add('flex');
-                document.getElementById('note-title').value = data.title;
-                document.getElementById('note-content').value = data.content;
-                loadNotes();
+                document.getElementById('editor-empty').classList.add('hidden'); document.getElementById('editor-main').classList.remove('hidden'); document.getElementById('editor-main').classList.add('flex');
+                document.getElementById('note-title').value = data.title; document.getElementById('note-content').value = data.content; loadNotes();
             });
         }
-
         async function autoSave() {
-            document.getElementById('save-status').innerText = "Saving...";
-            if(saveTimeout) clearTimeout(saveTimeout);
+            document.getElementById('save-status').innerText = "Saving..."; if(saveTimeout) clearTimeout(saveTimeout);
             saveTimeout = setTimeout(async () => {
-                await sb.from('notes').update({ 
-                    title: document.getElementById('note-title').value, 
-                    content: document.getElementById('note-content').value 
-                }).eq('id', activeNoteId);
-                document.getElementById('save-status').innerText = "Saved";
-                loadNotes(); // Update sidebar titles
+                await sb.from('notes').update({ title: document.getElementById('note-title').value, content: document.getElementById('note-content').value }).eq('id', activeNoteId);
+                document.getElementById('save-status').innerText = "Saved"; loadNotes();
             }, 1000);
         }
-        
-        async function deleteCurrentNote() {
-            if(confirm("Are you sure you want to delete this note?")) {
-                await sb.from('notes').delete().eq('id', activeNoteId);
-                activeNoteId = null;
-                document.getElementById('editor-main').classList.add('hidden');
-                document.getElementById('editor-empty').classList.remove('hidden');
-                loadNotes();
-            }
-        }
+        async function deleteCurrentNote() { if(confirm("Delete?")) { await sb.from('notes').delete().eq('id', activeNoteId); activeNoteId = null; document.getElementById('editor-main').classList.add('hidden'); document.getElementById('editor-empty').classList.remove('hidden'); loadNotes(); } }
 
         // --- AI HUMANIZER ---
         async function humanizeText() {
             const textArea = document.getElementById('note-content');
             const text = textArea.value;
-            if(!text) return alert("Please type something in the note first!");
-            
-            showLoader(true, "AI is rewriting your text...");
-            
+            if(!text) return alert("Please type something first!");
+            showLoader(true, "Humanizing...");
             try {
                 const res = await fetch('https://api.undetectable.ai/api/v2/humanize', {
                     method: 'POST',
@@ -329,17 +265,9 @@
                     body: JSON.stringify({ content: text, readability: 'High School', purpose: 'General Writing' })
                 });
                 const data = await res.json();
-                
-                if(data.output) {
-                    textArea.value = data.output;
-                    autoSave();
-                    alert("✨ Text successfully humanized!");
-                } else { 
-                    alert("AI Error: " + (data.message || "Unknown error")); 
-                }
-            } catch(e) { 
-                alert("Connection Error: " + e.message); 
-            }
+                if(data.output) { textArea.value = data.output; autoSave(); alert("Done! ✨"); }
+                else { alert("AI Error: " + (data.message || "Unknown error")); }
+            } catch(e) { alert("Connection Error: " + e.message); }
             showLoader(false);
         }
     </script>
