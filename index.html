@@ -1,538 +1,666 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verix Vault</title>
-    <!-- ✅ FIX 1: Use the full UMD build URL for Supabase (more reliable than cdn.jsdelivr.net) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <style>
-        body { background-color: #0f172a; color: #e2e8f0; font-family: sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .sidebar-item { transition: all 0.2s; cursor: pointer; border-radius: 0.5rem; }
-        .sidebar-item:hover, .sidebar-item.active { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-left: 3px solid #60a5fa; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verix Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root {
+  --bg:#0e0f13; --surface:#14161c; --raised:#1c1f28; --border:#272b38;
+  --muted:#3a3f52; --text:#dde1ed; --soft:#7c82a0;
+  --accent:#c8a97e; --accent2:#7e9fc8; --green:#7ec8a0; --red:#c87e7e;
+  --glow:rgba(200,169,126,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;font-weight:300;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px;}
+
+/* AUTH */
+#auth-screen{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;background-image:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(200,169,126,0.07) 0%,transparent 70%);}
+.auth-card{width:100%;max-width:400px;padding:3rem 2.5rem;background:var(--surface);border:1px solid var(--border);border-radius:20px;animation:fadeUp 0.5s ease both;}
+.auth-logo{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),#a07848);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 1.5rem;box-shadow:0 8px 32px rgba(200,169,126,0.3);}
+.auth-title{font-family:'DM Serif Display',serif;font-size:2rem;text-align:center;color:var(--text);margin-bottom:0.3rem;}
+.auth-sub{text-align:center;color:var(--soft);font-size:0.8rem;margin-bottom:2rem;letter-spacing:0.08em;text-transform:uppercase;}
+.auth-input{width:100%;padding:0.8rem 1rem;margin-bottom:0.8rem;background:var(--raised);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:0.9rem;font-family:'Lato',sans-serif;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+.auth-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow);}
+.auth-btn{width:100%;padding:0.85rem;background:linear-gradient(135deg,var(--accent),#a07848);border:none;border-radius:10px;color:#0e0f13;font-family:'Lato',sans-serif;font-weight:700;font-size:0.95rem;cursor:pointer;margin-top:0.5rem;transition:opacity 0.2s,transform 0.1s;}
+.auth-btn:hover{opacity:0.9;}
+.auth-btn:active{transform:scale(0.98);}
+#auth-error{color:var(--red);font-size:0.82rem;text-align:center;margin-top:0.8rem;min-height:1.2rem;}
+
+/* LAYOUT */
+#app{display:none;width:100%;height:100%;flex-direction:row;}
+#app.visible{display:flex;}
+
+/* SIDEBAR */
+#sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.sidebar-top{padding:1.4rem 1.2rem 1rem;border-bottom:1px solid var(--border);}
+.brand{font-family:'DM Serif Display',serif;font-size:1.35rem;color:var(--accent);letter-spacing:0.01em;}
+.brand-sub{font-size:0.7rem;color:var(--soft);letter-spacing:0.1em;text-transform:uppercase;}
+.nav-section{padding:1rem 0.8rem 0;}
+.nav-label{font-size:0.65rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;padding:0 0.5rem 0.5rem;}
+.nav-item{display:flex;align-items:center;gap:0.7rem;padding:0.65rem 0.75rem;margin-bottom:2px;border-radius:8px;cursor:pointer;font-size:0.87rem;color:var(--soft);transition:all 0.15s;border:1px solid transparent;}
+.nav-item:hover{background:var(--raised);color:var(--text);}
+.nav-item.active{background:var(--glow);color:var(--accent);border-color:rgba(200,169,126,0.2);}
+.nav-item i{font-size:1rem;width:18px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--accent);color:#0e0f13;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px;}
+.sidebar-bottom{margin-top:auto;padding:1rem 0.8rem;border-top:1px solid var(--border);}
+.user-pill{display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.75rem;border-radius:8px;background:var(--raised);margin-bottom:0.5rem;}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),#4a6fa0);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:white;flex-shrink:0;}
+.user-email{font-size:0.75rem;color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.logout-btn{display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.75rem;border-radius:8px;color:var(--soft);font-size:0.82rem;cursor:pointer;transition:all 0.15s;width:100%;background:none;border:none;font-family:'Lato',sans-serif;}
+.logout-btn:hover{background:rgba(200,126,126,0.1);color:var(--red);}
+
+/* MAIN */
+#main{flex:1;height:100%;overflow:hidden;display:flex;flex-direction:column;}
+.topbar{height:52px;min-height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;border-bottom:1px solid var(--border);background:var(--surface);}
+.topbar-left{display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:var(--soft);}
+.topbar-right{display:flex;align-items:center;gap:0.6rem;}
+.crumb-btn{color:var(--soft);background:none;border:none;cursor:pointer;font-size:0.82rem;font-family:'Lato',sans-serif;transition:color 0.15s;}
+.crumb-btn:hover{color:var(--text);}
+.btn-icon{width:32px;height:32px;border-radius:7px;background:var(--raised);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--soft);transition:all 0.15s;font-size:0.9rem;}
+.btn-icon:hover{background:var(--border);color:var(--text);}
+.btn-primary{display:flex;align-items:center;gap:0.4rem;padding:0.4rem 0.9rem;border-radius:7px;background:var(--accent);color:#0e0f13;border:none;cursor:pointer;font-size:0.82rem;font-weight:700;font-family:'Lato',sans-serif;transition:opacity 0.15s;}
+.btn-primary:hover{opacity:0.85;}
+
+/* FILES */
+#view-files{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+#file-grid{flex:1;padding:1.5rem;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:0.8rem;align-content:start;}
+.file-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 0.8rem;display:flex;flex-direction:column;align-items:center;gap:0.6rem;cursor:pointer;transition:all 0.2s;position:relative;}
+.file-card:hover{border-color:var(--muted);background:var(--raised);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);}
+.file-icon{font-size:2.5rem;line-height:1;}
+.file-name{font-size:0.75rem;text-align:center;color:var(--soft);word-break:break-all;line-height:1.3;width:100%;}
+.file-actions{position:absolute;top:6px;right:6px;display:none;gap:3px;}
+.file-card:hover .file-actions{display:flex;}
+.file-action-btn{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;cursor:pointer;border:none;transition:all 0.15s;}
+.fa-dl{background:rgba(126,159,200,0.15);color:var(--accent2);}
+.fa-dl:hover{background:rgba(126,159,200,0.3);}
+.fa-del{background:rgba(200,126,126,0.15);color:var(--red);}
+.fa-del:hover{background:rgba(200,126,126,0.3);}
+.empty-state{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);padding:4rem;gap:0.8rem;}
+.empty-state i{font-size:3rem;opacity:0.3;}
+.empty-state p{font-size:0.85rem;}
+
+/* NOTES */
+#view-notes{flex:1;overflow:hidden;display:none;}
+#view-notes.visible{display:flex;}
+.notes-sidebar{width:260px;min-width:260px;border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;background:var(--surface);}
+.notes-header{padding:1rem 1rem 0.8rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.notes-header-title{font-size:0.7rem;color:var(--soft);letter-spacing:0.1em;text-transform:uppercase;}
+.search-wrap{position:relative;margin:0.6rem 0.8rem;}
+.search-icon{position:absolute;left:0.6rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:0.8rem;}
+#notes-search{width:100%;padding:0.5rem 0.8rem 0.5rem 2rem;background:var(--raised);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.82rem;font-family:'Lato',sans-serif;outline:none;transition:border-color 0.15s;}
+#notes-search:focus{border-color:var(--accent);}
+#notes-list{flex:1;overflow-y:auto;padding:0.4rem;}
+.note-item{padding:0.75rem 0.8rem;border-radius:8px;cursor:pointer;margin-bottom:2px;transition:all 0.15s;border:1px solid transparent;}
+.note-item:hover{background:var(--raised);}
+.note-item.active{background:var(--glow);border-color:rgba(200,169,126,0.2);}
+.note-item-title{font-size:0.85rem;color:var(--text);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.2rem;}
+.note-item.active .note-item-title{color:var(--accent);}
+.note-item-preview{font-size:0.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0.2rem;}
+.note-item-meta{font-size:0.72rem;color:var(--muted);margin-top:0.2rem;}
+
+/* EDITOR */
+.editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#editor-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:1rem;}
+#editor-empty i{font-size:3.5rem;opacity:0.15;}
+#editor-empty p{font-size:0.85rem;}
+#editor-main{display:none;flex-direction:column;height:100%;}
+#editor-main.visible{display:flex;}
+.editor-topbar{padding:0.8rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);flex-shrink:0;}
+#note-title{background:none;border:none;outline:none;font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--text);flex:1;margin-right:1rem;}
+#note-title::placeholder{color:var(--muted);}
+.editor-actions{display:flex;align-items:center;gap:0.5rem;flex-shrink:0;}
+#save-status{font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);}
+.editor-toolbar{padding:0.4rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.3rem;flex-wrap:wrap;background:var(--surface);flex-shrink:0;}
+.toolbar-btn{padding:0.3rem 0.6rem;border-radius:5px;border:none;background:none;color:var(--soft);cursor:pointer;font-size:0.82rem;font-family:'Lato',sans-serif;transition:all 0.15s;display:flex;align-items:center;gap:0.3rem;}
+.toolbar-btn:hover{background:var(--raised);color:var(--text);}
+.toolbar-btn.ai{color:var(--accent);}
+.toolbar-btn.ai:hover{background:var(--glow);}
+.toolbar-sep{width:1px;height:16px;background:var(--border);margin:0 0.2rem;}
+#note-content{flex:1;background:none;border:none;outline:none;resize:none;padding:1.5rem 2rem;font-family:'DM Mono',monospace;font-size:0.88rem;line-height:1.9;color:var(--text);overflow-y:auto;}
+#note-content::placeholder{color:var(--muted);}
+.editor-footer{padding:0.4rem 1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;gap:1rem;font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);background:var(--surface);flex-shrink:0;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;width:100%;max-width:580px;animation:fadeUp 0.25s ease both;}
+.modal-title{font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--text);margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;}
+.modal-close{background:none;border:none;color:var(--soft);cursor:pointer;font-size:1.2rem;}
+.modal-close:hover{color:var(--text);}
+.modal-textarea{width:100%;padding:0.8rem 1rem;background:var(--raised);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.82rem;line-height:1.7;resize:none;outline:none;margin-bottom:0.8rem;transition:border-color 0.15s;}
+.modal-textarea:focus{border-color:var(--accent);}
+.modal-actions{display:flex;gap:0.6rem;justify-content:flex-end;}
+.btn-ghost{padding:0.5rem 1rem;border-radius:7px;background:var(--raised);border:1px solid var(--border);color:var(--soft);cursor:pointer;font-family:'Lato',sans-serif;font-size:0.85rem;transition:all 0.15s;}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted);}
+.result-box{background:var(--raised);border:1px solid rgba(126,200,160,0.2);border-radius:8px;padding:0.8rem 1rem;margin-top:0.8rem;font-family:'DM Mono',monospace;font-size:0.82rem;line-height:1.7;color:var(--green);max-height:200px;overflow-y:auto;white-space:pre-wrap;}
+.copy-btn{display:flex;align-items:center;gap:0.4rem;margin-top:0.5rem;font-size:0.78rem;color:var(--soft);background:none;border:none;cursor:pointer;font-family:'Lato',sans-serif;transition:color 0.15s;}
+.copy-btn:hover{color:var(--green);}
+
+/* LOADER */
+#loader{position:fixed;inset:0;z-index:300;background:rgba(14,15,19,0.75);backdrop-filter:blur(6px);display:none;flex-direction:column;align-items:center;justify-content:center;gap:1rem;}
+#loader.visible{display:flex;}
+.spinner{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+#loader-text{font-size:0.85rem;color:var(--soft);font-family:'DM Mono',monospace;}
+
+/* TOAST */
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:400;background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:0.7rem 1rem;font-size:0.83rem;color:var(--text);display:flex;align-items:center;gap:0.5rem;transform:translateY(20px);opacity:0;transition:all 0.3s;pointer-events:none;}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.success{border-color:rgba(126,200,160,0.3);color:var(--green);}
+#toast.error{border-color:rgba(200,126,126,0.3);color:var(--red);}
+
+/* CTX MENU */
+.ctx-menu{position:fixed;z-index:500;background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:0.4rem;min-width:150px;box-shadow:0 16px 48px rgba(0,0,0,0.5);animation:fadeUp 0.15s ease both;}
+.ctx-menu.hidden{display:none;}
+.ctx-item{padding:0.5rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.82rem;color:var(--soft);display:flex;align-items:center;gap:0.5rem;transition:all 0.1s;}
+.ctx-item:hover{background:var(--border);color:var(--text);}
+.ctx-item.danger{color:var(--red);}
+.ctx-item.danger:hover{background:rgba(200,126,126,0.1);}
+.ctx-sep{height:1px;background:var(--border);margin:0.3rem 0;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
 </head>
-<body class="h-screen flex overflow-hidden">
+<body>
 
-    <!-- AUTH SCREEN -->
-    <div id="auth-screen" class="absolute inset-0 z-50 bg-slate-900 flex items-center justify-center">
-        <div class="bg-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl text-center border border-slate-700">
-            <div class="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-3xl mb-6 shadow-lg shadow-blue-500/50">🔒</div>
-            <h2 class="text-2xl font-bold mb-2 text-white">Verix Vault</h2>
-            <p class="text-slate-400 mb-6 text-sm">System Secure • Authorized Access Only</p>
-            <input type="email" id="email" placeholder="Email" class="w-full p-3 mb-3 rounded-lg bg-slate-900 border border-slate-600 focus:border-blue-500 outline-none transition text-white">
-            <input type="password" id="pass" placeholder="Password" onkeydown="if(event.key==='Enter') handleLogin()" class="w-full p-3 mb-6 rounded-lg bg-slate-900 border border-slate-600 focus:border-blue-500 outline-none transition text-white">
-            <button id="login-btn" onclick="handleLogin()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-3 rounded-lg font-bold text-white shadow-lg transition transform active:scale-95">Unlock System</button>
-            <p id="auth-error" class="text-red-400 text-sm mt-4 min-h-[1.25rem]"></p>
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🗝</div>
+    <h1 class="auth-title">Verix Vault</h1>
+    <p class="auth-sub">Private · Encrypted · Yours</p>
+    <input class="auth-input" id="email" type="email" placeholder="Email address">
+    <input class="auth-input" id="pass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')handleLogin()">
+    <button class="auth-btn" id="login-btn" onclick="handleLogin()">Unlock Vault</button>
+    <p id="auth-error"></p>
+  </div>
+</div>
+
+<div id="app">
+  <nav id="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">Verix</div>
+      <div class="brand-sub">Personal Vault</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Workspace</div>
+      <div class="nav-item active" id="nav-files" onclick="switchView('files')"><i class="ri-hard-drive-3-line"></i> Drive</div>
+      <div class="nav-item" id="nav-notes" onclick="switchView('notes')"><i class="ri-quill-pen-line"></i> Notes <span class="nav-badge" id="notes-count">0</span></div>
+    </div>
+    <div class="nav-section" style="margin-top:0.5rem">
+      <div class="nav-label">AI Tools</div>
+      <div class="nav-item" onclick="openHumanizer()"><i class="ri-sparkling-2-line"></i> Humanizer</div>
+      <div class="nav-item" onclick="openSummarizer()"><i class="ri-file-reduce-line"></i> Summarize</div>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="user-pill">
+        <div class="user-avatar" id="user-av">V</div>
+        <div class="user-email" id="user-email-display">—</div>
+      </div>
+      <button class="logout-btn" onclick="logout()"><i class="ri-logout-box-r-line"></i> Sign Out</button>
+    </div>
+  </nav>
+
+  <main id="main">
+    <div id="view-files" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="crumb-btn" onclick="openFolder('/')"><i class="ri-home-4-line"></i> Home</button>
+          <span id="breadcrumbs"></span>
         </div>
-    </div>
-
-    <!-- MAIN APP -->
-    <div id="app-content" class="hidden flex w-full h-full">
-        <aside class="w-64 bg-slate-800 border-r border-slate-700 flex flex-col h-full z-10">
-            <div class="p-6">
-                <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Verix OS</h1>
-            </div>
-            <nav class="flex-1 p-3 space-y-1">
-                <div onclick="switchTab('files')" id="tab-files" class="sidebar-item active p-3 flex items-center gap-3 text-blue-400 bg-slate-700/30">
-                    <i class="ri-hard-drive-2-line text-lg"></i> <span class="font-medium">My Drive</span>
-                </div>
-                <div onclick="switchTab('notes')" id="tab-notes" class="sidebar-item p-3 flex items-center gap-3 text-slate-400">
-                    <i class="ri-sticky-note-line text-lg"></i> <span class="font-medium">Notes</span>
-                </div>
-                <div class="mt-8 px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">AI Tools</div>
-                <div onclick="showHumanizerPanel()" class="sidebar-item p-3 flex items-center gap-3 text-purple-400 hover:bg-purple-900/20">
-                    <i class="ri-sparkling-2-line text-lg"></i> <span class="font-medium">AI Humanizer</span>
-                </div>
-            </nav>
-            <div class="p-4 border-t border-slate-700">
-                <div id="user-email" class="text-xs text-slate-500 truncate mb-2 px-2"></div>
-                <button onclick="logout()" class="flex items-center gap-2 text-slate-400 hover:text-white transition w-full p-2 rounded hover:bg-slate-700"><i class="ri-logout-box-line"></i> Sign Out</button>
-            </div>
-        </aside>
-
-        <main class="flex-1 flex flex-col relative bg-slate-900 overflow-hidden">
-
-            <!-- FILES VIEW -->
-            <div id="view-files" class="h-full flex flex-col">
-                <header class="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-800/50 backdrop-blur-md flex-shrink-0">
-                    <div class="flex items-center gap-2 text-sm text-slate-400">
-                        <button onclick="openFolder('/')" class="hover:text-white flex items-center gap-1"><i class="ri-home-4-line"></i> Home</button>
-                        <span id="breadcrumbs" class="flex items-center"></span>
-                    </div>
-                    <div class="flex gap-3">
-                        <button onclick="createFolder()" class="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 text-slate-300 transition" title="New Folder"><i class="ri-folder-add-line"></i></button>
-                        <label class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer flex gap-2 items-center text-white shadow-lg shadow-blue-500/30 transition">
-                            <i class="ri-upload-cloud-line"></i> Upload File
-                            <input type="file" class="hidden" onchange="uploadFile(this)">
-                        </label>
-                    </div>
-                </header>
-                <div id="file-list" class="flex-1 p-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 content-start overflow-y-auto"></div>
-            </div>
-
-            <!-- NOTES VIEW -->
-            <div id="view-notes" class="hidden h-full flex">
-                <div class="w-72 border-r border-slate-800 bg-slate-800/30 flex flex-col flex-shrink-0">
-                    <div class="p-4 border-b border-slate-800 flex justify-between items-center">
-                        <span class="font-bold text-slate-400 text-xs tracking-wider">ALL NOTES</span>
-                        <button onclick="createNewNote()" class="text-blue-400 hover:text-white p-1 rounded hover:bg-slate-700 transition"><i class="ri-add-line text-xl"></i></button>
-                    </div>
-                    <div id="notes-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
-                </div>
-                <div class="flex-1 flex flex-col relative bg-slate-900 min-w-0">
-                    <div id="editor-empty" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600">
-                        <i class="ri-edit-circle-line text-6xl mb-4 opacity-20"></i>
-                        <p>Select a note or create a new one</p>
-                    </div>
-                    <div id="editor-main" class="hidden flex-col h-full">
-                        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 flex-shrink-0">
-                            <input id="note-title" oninput="autoSave()" class="bg-transparent text-xl font-bold flex-1 outline-none text-white placeholder-slate-600 mr-4" placeholder="Untitled Note">
-                            <div class="flex items-center gap-3 flex-shrink-0">
-                                <span id="save-status" class="text-xs text-slate-500 font-mono">Saved</span>
-                                <!-- ✅ FIX 2: Humanize now uses Anthropic Claude API via a proxy-safe method -->
-                                <button onclick="humanizeWithClaude()" class="text-purple-400 hover:text-purple-300 text-sm font-semibold flex gap-1 items-center px-3 py-1 bg-purple-900/20 rounded border border-purple-500/30 hover:bg-purple-900/40 transition">
-                                    <i class="ri-sparkling-fill"></i> Humanize
-                                </button>
-                                <button onclick="deleteCurrentNote()" class="text-slate-500 hover:text-red-500 p-2 rounded hover:bg-slate-800 transition"><i class="ri-delete-bin-line"></i></button>
-                            </div>
-                        </div>
-                        <textarea id="note-content" oninput="autoSave()" class="flex-1 bg-transparent p-8 outline-none resize-none font-mono text-sm leading-relaxed text-slate-300 overflow-y-auto" placeholder="Start typing..."></textarea>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- LOADER OVERLAY -->
-    <div id="loader" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center flex-col">
-        <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p id="loader-text" class="text-white font-semibold">Processing...</p>
-    </div>
-
-    <!-- AI HUMANIZER MODAL (standalone panel) -->
-    <div id="humanizer-modal" class="hidden fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col gap-4 p-6">
-            <div class="flex justify-between items-center">
-                <h3 class="text-lg font-bold text-purple-300 flex items-center gap-2"><i class="ri-sparkling-2-fill"></i> AI Humanizer</h3>
-                <button onclick="document.getElementById('humanizer-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-xl"><i class="ri-close-line"></i></button>
-            </div>
-            <textarea id="humanizer-input" class="bg-slate-900 border border-slate-700 rounded-xl p-4 text-slate-300 text-sm font-mono resize-none outline-none focus:border-purple-500 transition" rows="8" placeholder="Paste your AI-generated text here to humanize it..."></textarea>
-            <button onclick="humanizeStandalone()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 py-3 rounded-xl font-bold text-white transition">✨ Humanize Text</button>
-            <div id="humanizer-result" class="hidden">
-                <div class="text-xs text-slate-500 mb-2 uppercase tracking-wider">Result</div>
-                <textarea id="humanizer-output" class="bg-slate-900/80 border border-green-500/30 rounded-xl p-4 text-green-300 text-sm font-mono resize-none outline-none w-full" rows="8" readonly></textarea>
-                <button onclick="copyHumanizerResult()" class="mt-2 text-sm text-slate-400 hover:text-white flex items-center gap-1"><i class="ri-file-copy-line"></i> Copy to Clipboard</button>
-            </div>
+        <div class="topbar-right">
+          <div class="btn-icon" onclick="createFolder()" title="New Folder"><i class="ri-folder-add-line"></i></div>
+          <label class="btn-primary" style="cursor:pointer;"><i class="ri-upload-2-line"></i> Upload<input type="file" style="display:none" onchange="uploadFile(this)" multiple></label>
         </div>
+      </div>
+      <div id="file-grid"></div>
     </div>
 
-    <script>
-    // ============================================================
-    // ✅ CONFIGURATION — Replace these with YOUR Supabase project values
-    // ✅ FIX 3: The URL ref must EXACTLY match the 'ref' in your JWT token.
-    //    Go to: Supabase Dashboard → Settings → API → copy Project URL & anon key
-    // ============================================================
-    const SUPABASE_URL = 'https://psukmzzuhpprfoanvjat.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304'; // ✅ New publishable key format
+    <div id="view-notes">
+      <div class="notes-sidebar">
+        <div class="notes-header">
+          <span class="notes-header-title">All Notes</span>
+          <div class="btn-icon" onclick="createNewNote()" title="New Note" style="width:26px;height:26px;font-size:0.8rem;"><i class="ri-add-line"></i></div>
+        </div>
+        <div class="search-wrap">
+          <i class="ri-search-line search-icon"></i>
+          <input id="notes-search" placeholder="Search notes…" oninput="filterNotes(this.value)">
+        </div>
+        <div id="notes-list"></div>
+      </div>
+      <div class="editor-area">
+        <div id="editor-empty"><i class="ri-quill-pen-line"></i><p>Select a note or press + to create one</p></div>
+        <div id="editor-main">
+          <div class="editor-topbar">
+            <input id="note-title" placeholder="Untitled Note" oninput="autoSave()">
+            <div class="editor-actions">
+              <span id="save-status">Saved</span>
+              <div class="btn-icon" onclick="togglePin()" id="pin-btn" title="Pin"><i class="ri-pushpin-line"></i></div>
+              <div class="btn-icon" onclick="exportNote()" title="Export"><i class="ri-download-line"></i></div>
+              <div class="btn-icon" onclick="copyNoteContent()" title="Copy"><i class="ri-file-copy-line"></i></div>
+              <div class="btn-icon" onclick="deleteCurrentNote()" title="Delete" style="color:var(--red)"><i class="ri-delete-bin-line"></i></div>
+            </div>
+          </div>
+          <div class="editor-toolbar">
+            <button class="toolbar-btn" onclick="insertMd('**','**')" title="Bold"><i class="ri-bold"></i></button>
+            <button class="toolbar-btn" onclick="insertMd('*','*')" title="Italic"><i class="ri-italic"></i></button>
+            <button class="toolbar-btn" onclick="insertMd('`','`')" title="Code"><i class="ri-code-line"></i></button>
+            <button class="toolbar-btn" onclick="insertMd('~~','~~')" title="Strike"><i class="ri-strikethrough"></i></button>
+            <button class="toolbar-btn" onclick="insertPrefix('# ')" title="H1"><i class="ri-h-1"></i></button>
+            <button class="toolbar-btn" onclick="insertPrefix('## ')" title="H2"><i class="ri-h-2"></i></button>
+            <button class="toolbar-btn" onclick="insertPrefix('- ')" title="List"><i class="ri-list-unordered"></i></button>
+            <button class="toolbar-btn" onclick="insertPrefix('> ')" title="Quote"><i class="ri-double-quotes-r"></i></button>
+            <button class="toolbar-btn" onclick="insertPrefix('- [ ] ')" title="Checklist"><i class="ri-checkbox-line"></i></button>
+            <div class="toolbar-sep"></div>
+            <button class="toolbar-btn ai" onclick="humanizeNote()"><i class="ri-sparkling-fill"></i> Humanize</button>
+            <button class="toolbar-btn ai" onclick="summarizeNote()"><i class="ri-file-reduce-line"></i> Summarize</button>
+          </div>
+          <textarea id="note-content" placeholder="Start writing… markdown shortcuts work too" oninput="autoSave();updateCounts()"></textarea>
+          <div class="editor-footer">
+            <span id="word-count">0 words</span>
+            <span id="char-count">0 chars</span>
+            <span id="line-count">0 lines</span>
+            <span id="last-saved" style="margin-left:auto;"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
 
-    // ✅ FIX 4: Undetectable.ai has CORS restrictions — it CANNOT be called from a browser directly.
-    //    We now use the Anthropic Claude API (available inside Claude.ai artifacts) for humanizing.
-    //    If you need Undetectable specifically, you must call it from a backend (Node.js, Supabase Edge Function, etc.)
-    // ============================================================
+<div id="loader"><div class="spinner"></div><div id="loader-text">Loading…</div></div>
+<div id="toast"></div>
 
-    // ✅ FIX 5: Initialize Supabase correctly — access via window.supabase from the UMD bundle
-    let sb;
-    try {
-        // The UMD bundle exposes createClient on the global `supabase` object
-        sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            auth: {
-                persistSession: false, // Avoids cookie/storage issues in strict browsers
-                autoRefreshToken: true,
-                detectSessionInUrl: false
-            }
-        });
-        console.log('✅ Supabase client initialized');
-    } catch(e) {
-        console.error('❌ Supabase init failed:', e);
-        alert('Supabase failed to initialize. Check your URL and Key in the config section.');
+<!-- HUMANIZER MODAL -->
+<div class="modal-overlay hidden" id="humanizer-modal">
+  <div class="modal">
+    <div class="modal-title"><span><i class="ri-sparkling-2-line" style="color:var(--accent)"></i> AI Humanizer</span><button class="modal-close" onclick="closeModal('humanizer-modal')"><i class="ri-close-line"></i></button></div>
+    <textarea class="modal-textarea" id="humanizer-input" rows="7" placeholder="Paste AI-generated text here…"></textarea>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('humanizer-modal')">Cancel</button>
+      <button class="btn-primary" onclick="runHumanizer()"><i class="ri-sparkling-fill"></i> Humanize</button>
+    </div>
+    <div id="humanizer-result" style="display:none">
+      <div class="result-box" id="humanizer-output"></div>
+      <div style="display:flex;gap:0.8rem;margin-top:0.5rem;">
+        <button class="copy-btn" onclick="copyResult('humanizer-output')"><i class="ri-file-copy-line"></i> Copy</button>
+        <button class="copy-btn" onclick="insertHumanizerToNote()" style="color:var(--accent)"><i class="ri-arrow-right-line"></i> Insert into note</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARIZER MODAL -->
+<div class="modal-overlay hidden" id="summarizer-modal">
+  <div class="modal">
+    <div class="modal-title"><span><i class="ri-file-reduce-line" style="color:var(--accent2)"></i> AI Summarizer</span><button class="modal-close" onclick="closeModal('summarizer-modal')"><i class="ri-close-line"></i></button></div>
+    <textarea class="modal-textarea" id="summarizer-input" rows="7" placeholder="Paste text to summarize…"></textarea>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('summarizer-modal')">Cancel</button>
+      <button class="btn-primary" style="background:var(--accent2);color:#0e0f13;" onclick="runSummarizer()"><i class="ri-file-reduce-line"></i> Summarize</button>
+    </div>
+    <div id="summarizer-result" style="display:none">
+      <div class="result-box" id="summarizer-output" style="color:var(--accent2);border-color:rgba(126,159,200,0.2)"></div>
+      <button class="copy-btn" onclick="copyResult('summarizer-output')"><i class="ri-file-copy-line"></i> Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div class="ctx-menu hidden" id="ctx-menu">
+  <div class="ctx-item" id="ctx-open"><i class="ri-edit-line"></i> Open</div>
+  <div class="ctx-item" id="ctx-pin"><i class="ri-pushpin-line"></i> Pin</div>
+  <div class="ctx-item" id="ctx-export"><i class="ri-download-line"></i> Export</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctx-delete"><i class="ri-delete-bin-line"></i> Delete</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://psukmzzuhpprfoanvjat.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304';
+
+let sb;
+try {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false }
+  });
+} catch(e) { alert('Init error: ' + e.message); }
+
+let currentPath = '/';
+let activeNoteId = null;
+let saveTimeout = null;
+let allNotes = [];
+let pinnedNotes = new Set(JSON.parse(localStorage.getItem('vx_pins') || '[]'));
+
+// ── UTILS ──
+function showLoader(v, t='Loading…') {
+  document.getElementById('loader').classList.toggle('visible', v);
+  document.getElementById('loader-text').textContent = t;
+}
+function showToast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show ' + type;
+  setTimeout(() => el.className = '', 3200);
+}
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ── AUTH ──
+async function handleLogin() {
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('auth-error');
+  btn.textContent = 'Verifying…'; btn.disabled = true; err.textContent = '';
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('pass').value;
+  if (!email || !pass) { err.textContent = 'Enter email and password'; btn.textContent = 'Unlock Vault'; btn.disabled = false; return; }
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) {
+      err.textContent = error.message.includes('Invalid') ? 'Wrong email or password' : error.message;
+      btn.textContent = 'Unlock Vault'; btn.disabled = false;
+    } else {
+      btn.textContent = '✓ Unlocked';
+      document.getElementById('user-email-display').textContent = data.user.email;
+      document.getElementById('user-av').textContent = data.user.email[0].toUpperCase();
+      setTimeout(initApp, 350);
     }
+  } catch(e) {
+    err.textContent = e.message.includes('fetch') ? 'Cannot reach server — open via localhost, not file://' : e.message;
+    btn.textContent = 'Unlock Vault'; btn.disabled = false;
+  }
+}
+async function logout() { try { await sb.auth.signOut(); } catch(e){} location.reload(); }
 
-    let currentPath = '/', activeNoteId = null, saveTimeout = null;
+// ── INIT ──
+function initApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  loadFiles(); loadNotes();
+}
+function switchView(v) {
+  document.getElementById('nav-files').classList.toggle('active', v==='files');
+  document.getElementById('nav-notes').classList.toggle('active', v==='notes');
+  document.getElementById('view-files').style.display = v==='files' ? 'flex' : 'none';
+  document.getElementById('view-notes').classList.toggle('visible', v==='notes');
+}
 
-    // ============================================================
-    // AUTH
-    // ============================================================
-    async function handleLogin() {
-        const btn = document.getElementById('login-btn');
-        const err = document.getElementById('auth-error');
-        btn.innerText = "Verifying...";
-        btn.disabled = true;
-        err.innerText = "";
+// ── FILES ──
+async function loadFiles() {
+  showLoader(true, 'Loading Drive…');
+  try {
+    const path = currentPath === '/' ? '' : currentPath;
+    const { data, error } = await sb.storage.from('files').list(path, { limit: 300, sortBy: { column: 'name', order: 'asc' } });
+    if (error) { showToast('Storage: ' + error.message, 'error'); showLoader(false); return; }
+    renderFiles(data || []);
+  } catch(e) { showToast('Drive error: ' + e.message, 'error'); }
+  showLoader(false);
+}
+function renderFiles(data) {
+  const grid = document.getElementById('file-grid');
+  const items = data.filter(i => i.name !== '.keep');
+  let html = '';
+  if (currentPath !== '/') html += `<div class="file-card" onclick="goUp()"><span class="file-icon">⬆️</span><span class="file-name" style="color:var(--soft)">Go Back</span></div>`;
+  if (!items.length && currentPath === '/') html += `<div class="empty-state"><i class="ri-inbox-2-line"></i><p>Your Drive is empty — upload something</p></div>`;
+  items.forEach(item => {
+    const isFolder = !item.metadata;
+    const icon = isFolder ? '📁' : getEmoji(item.name);
+    html += `<div class="file-card" ${isFolder ? `onclick="openFolder('${item.name}')"` : ''}>
+      <span class="file-icon">${icon}</span>
+      <span class="file-name" title="${item.name}">${item.name}</span>
+      <div class="file-actions">
+        ${!isFolder ? `<button class="file-action-btn fa-dl" onclick="downloadFile('${item.name}');event.stopPropagation()" title="Download"><i class="ri-download-2-line"></i></button>
+        <button class="file-action-btn fa-del" onclick="deleteFile('${item.name}');event.stopPropagation()" title="Delete"><i class="ri-delete-bin-line"></i></button>` : ''}
+      </div>
+    </div>`;
+  });
+  grid.innerHTML = html;
+}
+function getEmoji(n) {
+  const e = n.split('.').pop()?.toLowerCase();
+  return {pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📊',pptx:'📊',jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🎞',mp4:'🎬',mp3:'🎵',zip:'📦',txt:'📃',md:'📃',js:'💻',py:'💻',html:'💻',json:'💻'}[e] || '📎';
+}
+function openFolder(n) { currentPath = n==='/' ? '/' : (currentPath==='/' ? n : `${currentPath}/${n}`); updateBC(); loadFiles(); }
+function goUp() { const p = currentPath.split('/').filter(Boolean); p.pop(); currentPath = p.length ? p.join('/') : '/'; updateBC(); loadFiles(); }
+function updateBC() {
+  const bc = document.getElementById('breadcrumbs');
+  bc.innerHTML = currentPath==='/' ? '' : currentPath.split('/').filter(Boolean).map(p=>`<span style="color:var(--muted);margin:0 4px">/</span><span style="color:var(--text)">${p}</span>`).join('');
+}
+async function createFolder() {
+  const n = prompt('Folder name:'); if (!n?.trim()) return;
+  const { error } = await sb.storage.from('files').upload(`${currentPath==='/'?'':currentPath+'/'}${n.trim()}/.keep`, new Blob(['']));
+  if (error && !error.message.includes('already')) { showToast(error.message, 'error'); return; }
+  loadFiles(); showToast('Folder created ✓', 'success');
+}
+async function uploadFile(inp) {
+  if (!inp.files.length) return;
+  showLoader(true, `Uploading ${inp.files.length} file(s)…`);
+  for (const file of inp.files) await sb.storage.from('files').upload(`${currentPath==='/'?'':currentPath+'/'}${file.name}`, file, { upsert: true });
+  showLoader(false); loadFiles(); showToast(`${inp.files.length} file(s) uploaded ✓`, 'success');
+}
+async function deleteFile(n) {
+  if (!confirm(`Delete "${n}"?`)) return;
+  await sb.storage.from('files').remove([`${currentPath==='/'?'':currentPath+'/'}${n}`]);
+  loadFiles(); showToast('Deleted');
+}
+function downloadFile(n) {
+  const { data } = sb.storage.from('files').getPublicUrl(`${currentPath==='/'?'':currentPath+'/'}${n}`);
+  window.open(data.publicUrl, '_blank');
+}
 
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('pass').value;
-
-        if (!email || !password) {
-            btn.innerText = "Unlock System";
-            btn.disabled = false;
-            err.innerText = "Please enter both email and password.";
-            return;
-        }
-
-        // ✅ FIX 6: Wrap in try/catch — network errors (CORS, DNS) throw, not just return {error}
-        try {
-            const { data, error } = await sb.auth.signInWithPassword({ email, password });
-            if (error) {
-                err.innerText = "Access Denied: " + error.message;
-                btn.innerText = "Unlock System";
-                btn.disabled = false;
-            } else {
-                btn.innerText = "✅ Success! Loading...";
-                document.getElementById('user-email').innerText = data.user?.email || '';
-                setTimeout(initApp, 400);
-            }
-        } catch (e) {
-            // ✅ FIX 7: Provide clear diagnosis on network failures
-            btn.innerText = "Unlock System";
-            btn.disabled = false;
-            if (e.message.includes('fetch') || e.message.includes('network') || e.message.includes('Failed')) {
-                err.innerText = "❌ Cannot reach Supabase. Check: 1) Your Project URL is correct 2) Your project is not paused 3) Your internet connection.";
-            } else {
-                err.innerText = "Error: " + e.message;
-            }
-            console.error('Login error:', e);
-        }
+// ── NOTES ──
+// ✅ FIX: Gracefully handle missing columns (updated_at, tags, pinned)
+async function loadNotes() {
+  try {
+    const { data, error } = await sb.from('notes').select('*').order('created_at', { ascending: false });
+    if (error) {
+      document.getElementById('notes-list').innerHTML = `<div style="padding:1rem;font-size:0.75rem;color:var(--red)">
+        Error: ${error.message}<br><br>
+        <span style="color:var(--soft)">Run in Supabase → SQL Editor to fix:<br>
+        <code style="color:var(--accent)">ALTER TABLE notes ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();</code>
+        </span></div>`;
+      return;
     }
+    allNotes = data || [];
+    document.getElementById('notes-count').textContent = allNotes.length;
+    renderNotesList(allNotes);
+  } catch(e) { console.error(e); }
+}
+function renderNotesList(notes) {
+  const sorted = [...notes].sort((a,b) => {
+    const ap = pinnedNotes.has(a.id) ? 1 : 0, bp = pinnedNotes.has(b.id) ? 1 : 0;
+    return bp - ap;
+  });
+  document.getElementById('notes-list').innerHTML = sorted.map(n => {
+    const isPinned = pinnedNotes.has(n.id);
+    const preview = (n.content||'').replace(/[#*`>~-]/g,'').trim().slice(0,70);
+    const d = new Date(n.updated_at || n.created_at);
+    const ds = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    return `<div class="note-item ${activeNoteId===n.id?'active':''}" onclick="openNote('${n.id}')" oncontextmenu="noteCtx(event,'${n.id}')">
+      <div class="note-item-title">${isPinned?'📌 ':''}${n.title||'Untitled'}</div>
+      <div class="note-item-preview">${preview||'Empty note'}</div>
+      <div class="note-item-meta">${ds}</div>
+    </div>`;
+  }).join('') || '<div style="padding:2rem;text-align:center;font-size:0.8rem;color:var(--muted)">No notes yet<br><small>Press + to create one</small></div>';
+}
+function filterNotes(q) {
+  if (!q.trim()) { renderNotesList(allNotes); return; }
+  renderNotesList(allNotes.filter(n=>(n.title||'').toLowerCase().includes(q.toLowerCase())||(n.content||'').toLowerCase().includes(q.toLowerCase())));
+}
 
-    async function logout() {
-        try { await sb.auth.signOut(); } catch(e) {}
-        location.reload();
-    }
+async function createNewNote() {
+  // ✅ FIX: Try with updated_at first, fall back without it if column missing
+  let payload = { title: 'Untitled Note', content: '' };
+  try { payload.updated_at = new Date().toISOString(); } catch(e) {}
+  let { data, error } = await sb.from('notes').insert([payload]).select();
+  if (error && error.message.includes('updated_at')) {
+    ({ data, error } = await sb.from('notes').insert([{ title: 'Untitled Note', content: '' }]).select());
+  }
+  if (error) { showToast('Create failed: ' + error.message, 'error'); return; }
+  allNotes.unshift(data[0]);
+  document.getElementById('notes-count').textContent = allNotes.length;
+  renderNotesList(allNotes);
+  openNote(data[0].id);
+}
 
-    // ============================================================
-    // APP INIT & NAVIGATION
-    // ============================================================
-    function initApp() {
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('app-content').classList.remove('hidden');
-        document.getElementById('app-content').classList.add('flex');
-        loadFiles();
-        loadNotes();
-    }
+function openNote(id) {
+  activeNoteId = id;
+  const note = allNotes.find(n => n.id === id);
+  if (!note) return;
+  document.getElementById('editor-empty').style.display = 'none';
+  document.getElementById('editor-main').classList.add('visible');
+  document.getElementById('note-title').value = note.title || '';
+  document.getElementById('note-content').value = note.content || '';
+  document.getElementById('pin-btn').innerHTML = pinnedNotes.has(id) ? '<i class="ri-pushpin-fill"></i>' : '<i class="ri-pushpin-line"></i>';
+  updateCounts();
+  renderNotesList(allNotes);
+  const d = new Date(note.updated_at || note.created_at);
+  document.getElementById('last-saved').textContent = 'Saved ' + d.toLocaleTimeString();
+}
 
-    function switchTab(tab) {
-        ['files','notes'].forEach(t => {
-            const el = document.getElementById(`tab-${t}`);
-            el.classList.remove('active','text-blue-400','bg-slate-700/30');
-            el.classList.add('text-slate-400');
-            document.getElementById(`view-${t}`).classList.add('hidden');
-        });
-        document.getElementById(`tab-${tab}`).classList.add('active','text-blue-400','bg-slate-700/30');
-        document.getElementById(`tab-${tab}`).classList.remove('text-slate-400');
-        document.getElementById(`view-${tab}`).classList.remove('hidden');
-        if (tab === 'notes') document.getElementById(`view-${tab}`).classList.add('flex');
-    }
+function updateCounts() {
+  const txt = document.getElementById('note-content').value;
+  document.getElementById('word-count').textContent = (txt.trim() ? txt.trim().split(/\s+/).length : 0) + ' words';
+  document.getElementById('char-count').textContent = txt.length + ' chars';
+  document.getElementById('line-count').textContent = txt.split('\n').length + ' lines';
+}
 
-    function showLoader(show, text = "Loading...") {
-        document.getElementById('loader-text').innerText = text;
-        document.getElementById('loader').classList.toggle('hidden', !show);
+async function autoSave() {
+  if (!activeNoteId) return;
+  document.getElementById('save-status').textContent = '·';
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async () => {
+    const title   = document.getElementById('note-title').value;
+    const content = document.getElementById('note-content').value;
+    // ✅ FIX: Try with updated_at, silently retry without if column missing
+    let payload = { title, content };
+    try { payload.updated_at = new Date().toISOString(); } catch(e) {}
+    let { error } = await sb.from('notes').update(payload).eq('id', activeNoteId);
+    if (error && error.message.includes('updated_at')) {
+      ({ error } = await sb.from('notes').update({ title, content }).eq('id', activeNoteId));
     }
+    document.getElementById('save-status').textContent = error ? '✗' : 'Saved';
+    document.getElementById('last-saved').textContent = 'Saved ' + new Date().toLocaleTimeString();
+    const note = allNotes.find(n => n.id === activeNoteId);
+    if (note) { note.title = title; note.content = content; note.updated_at = new Date().toISOString(); }
+    renderNotesList(allNotes);
+  }, 1000);
+}
 
-    // ============================================================
-    // FILES
-    // ============================================================
-    async function loadFiles() {
-        showLoader(true, "Loading files...");
-        try {
-            const path = currentPath === '/' ? '' : currentPath;
-            const { data, error } = await sb.storage.from('files').list(path, { limit: 200, sortBy: { column: 'name', order: 'asc' } });
-            if (error) {
-                console.error('Files error:', error);
-                document.getElementById('file-list').innerHTML = `<div class="col-span-full text-center text-red-400 py-10"><i class="ri-error-warning-line text-4xl mb-2 block"></i><p>Storage error: ${error.message}</p><p class="text-xs text-slate-500 mt-1">Make sure a bucket named "files" exists in Supabase Storage with public access enabled.</p></div>`;
-                showLoader(false);
-                return;
-            }
-            renderFiles(data || []);
-        } catch(e) {
-            console.error('Files fetch error:', e);
-            document.getElementById('file-list').innerHTML = `<div class="col-span-full text-center text-red-400 py-10"><i class="ri-wifi-off-line text-4xl mb-2 block"></i><p>Connection failed: ${e.message}</p></div>`;
-        }
-        showLoader(false);
-    }
+async function deleteCurrentNote() {
+  if (!activeNoteId || !confirm('Delete this note?')) return;
+  await sb.from('notes').delete().eq('id', activeNoteId);
+  allNotes = allNotes.filter(n => n.id !== activeNoteId);
+  activeNoteId = null;
+  document.getElementById('editor-main').classList.remove('visible');
+  document.getElementById('editor-empty').style.display = 'flex';
+  document.getElementById('notes-count').textContent = allNotes.length;
+  renderNotesList(allNotes);
+  showToast('Note deleted');
+}
 
-    function renderFiles(data) {
-        const list = document.getElementById('file-list');
-        let html = currentPath !== '/' ? `
-            <div onclick="goUp()" class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl cursor-pointer flex flex-col items-center justify-center hover:bg-slate-700 transition group">
-                <i class="ri-arrow-go-back-line text-2xl mb-2 text-slate-500 group-hover:text-white"></i>
-                <span class="text-xs text-slate-500 group-hover:text-white">Go Back</span>
-            </div>` : '';
+function togglePin() {
+  if (!activeNoteId) return;
+  pinnedNotes.has(activeNoteId) ? pinnedNotes.delete(activeNoteId) : pinnedNotes.add(activeNoteId);
+  localStorage.setItem('vx_pins', JSON.stringify([...pinnedNotes]));
+  document.getElementById('pin-btn').innerHTML = pinnedNotes.has(activeNoteId) ? '<i class="ri-pushpin-fill"></i>' : '<i class="ri-pushpin-line"></i>';
+  renderNotesList(allNotes);
+  showToast(pinnedNotes.has(activeNoteId) ? 'Pinned 📌' : 'Unpinned', 'success');
+}
 
-        const items = data.filter(i => i.name !== '.keep');
-        if (items.length === 0 && currentPath === '/') {
-            html += `<div class="col-span-full text-center text-slate-600 py-20"><i class="ri-inbox-line text-6xl mb-4 block opacity-20"></i><p>No files yet. Upload something!</p></div>`;
-        }
+function exportNote() {
+  const title = document.getElementById('note-title').value || 'note';
+  const blob = new Blob([`# ${title}\n\n${document.getElementById('note-content').value}`], { type: 'text/markdown' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${title}.md`; a.click();
+  showToast('Exported as .md ✓', 'success');
+}
 
-        items.forEach(item => {
-            const isFolder = !item.metadata;
-            const icon = isFolder ? 'ri-folder-fill text-yellow-500' : getFileIcon(item.name);
-            html += `
-            <div class="bg-slate-800 p-4 rounded-xl relative group hover:bg-slate-700 hover:-translate-y-1 transition border border-slate-700/50 hover:border-blue-500/30 flex flex-col items-center shadow-lg cursor-pointer" ${isFolder ? `onclick="openFolder('${item.name}')"` : ''}>
-                <i class="${icon} text-5xl mb-3"></i>
-                <span class="text-xs text-center w-full truncate font-medium text-slate-300 group-hover:text-white" title="${item.name}">${item.name}</span>
-                <div class="absolute top-2 right-2 hidden group-hover:flex gap-1">
-                    ${!isFolder ? `
-                    <button onclick="downloadFile('${item.name}');event.stopPropagation()" class="bg-slate-900/80 p-1.5 rounded-md text-blue-400 hover:bg-blue-900" title="Download"><i class="ri-download-line"></i></button>
-                    <button onclick="deleteFile('${item.name}');event.stopPropagation()" class="bg-slate-900/80 p-1.5 rounded-md text-red-400 hover:bg-red-900" title="Delete"><i class="ri-delete-bin-line"></i></button>` : ''}
-                </div>
-            </div>`;
-        });
-        list.innerHTML = html;
-    }
+function copyNoteContent() {
+  navigator.clipboard.writeText(document.getElementById('note-content').value);
+  showToast('Copied ✓', 'success');
+}
 
-    function getFileIcon(name) {
-        const ext = name.split('.').pop()?.toLowerCase();
-        const icons = { pdf:'ri-file-pdf-fill text-red-400', doc:'ri-file-word-fill text-blue-400', docx:'ri-file-word-fill text-blue-400', xls:'ri-file-excel-fill text-green-400', xlsx:'ri-file-excel-fill text-green-400', png:'ri-image-fill text-purple-400', jpg:'ri-image-fill text-purple-400', jpeg:'ri-image-fill text-purple-400', gif:'ri-image-fill text-purple-400', mp4:'ri-video-fill text-pink-400', mp3:'ri-music-fill text-yellow-400', zip:'ri-file-zip-fill text-orange-400' };
-        return icons[ext] || 'ri-file-text-fill text-blue-400';
-    }
+// ── TOOLBAR ──
+function insertMd(before, after) {
+  const ta = document.getElementById('note-content');
+  const s = ta.selectionStart, e = ta.selectionEnd, sel = ta.value.slice(s,e);
+  ta.value = ta.value.slice(0,s) + before + sel + after + ta.value.slice(e);
+  ta.selectionStart = s + before.length; ta.selectionEnd = e + before.length;
+  ta.focus(); autoSave();
+}
+function insertPrefix(p) {
+  const ta = document.getElementById('note-content');
+  const s = ta.selectionStart;
+  const ls = ta.value.lastIndexOf('\n', s-1) + 1;
+  ta.value = ta.value.slice(0,ls) + p + ta.value.slice(ls);
+  ta.selectionStart = ta.selectionEnd = s + p.length;
+  ta.focus(); autoSave();
+}
 
-    function openFolder(n) {
-        currentPath = currentPath === '/' ? n : `${currentPath}/${n}`;
-        updateBreadcrumbs(); loadFiles();
-    }
-    function goUp() {
-        const parts = currentPath.split('/').filter(Boolean);
-        parts.pop();
-        currentPath = parts.length ? parts.join('/') : '/';
-        updateBreadcrumbs(); loadFiles();
-    }
-    function updateBreadcrumbs() {
-        document.getElementById('breadcrumbs').innerHTML = currentPath === '/' ? '' :
-            currentPath.split('/').filter(Boolean).map(p => ` <span class="text-slate-600 mx-1">/</span> <span class="text-slate-300">${p}</span>`).join('');
-    }
-    async function createFolder() {
-        const n = prompt("Folder name:");
-        if (!n || !n.trim()) return;
-        const path = `${currentPath === '/' ? '' : currentPath + '/'}${n.trim()}/.keep`;
-        const { error } = await sb.storage.from('files').upload(path, new Blob(['']));
-        if (error && !error.message.includes('already exists')) { alert('Error: ' + error.message); return; }
-        loadFiles();
-    }
-    async function uploadFile(inp) {
-        if (!inp.files[0]) return;
-        showLoader(true, `Uploading ${inp.files[0].name}...`);
-        const path = `${currentPath === '/' ? '' : currentPath + '/'}${inp.files[0].name}`;
-        const { error } = await sb.storage.from('files').upload(path, inp.files[0], { upsert: true });
-        showLoader(false);
-        if (error) { alert('Upload failed: ' + error.message); return; }
-        loadFiles();
-    }
-    async function deleteFile(n) {
-        if (!confirm(`Delete "${n}"?`)) return;
-        const path = `${currentPath === '/' ? '' : currentPath + '/'}${n}`;
-        const { error } = await sb.storage.from('files').remove([path]);
-        if (error) { alert('Delete failed: ' + error.message); return; }
-        loadFiles();
-    }
-    function downloadFile(n) {
-        const path = `${currentPath === '/' ? '' : currentPath + '/'}${n}`;
-        const { data } = sb.storage.from('files').getPublicUrl(path);
-        window.open(data.publicUrl, '_blank');
-    }
-
-    // ============================================================
-    // NOTES
-    // ============================================================
-    async function loadNotes() {
-        try {
-            const { data, error } = await sb.from('notes').select('id,title,created_at,updated_at').order('updated_at', { ascending: false });
-            if (error) {
-                console.error('Notes error:', error);
-                document.getElementById('notes-list').innerHTML = `<div class="text-red-400 text-xs p-3">Notes table error: ${error.message}<br><span class="text-slate-500">Create a "notes" table with columns: id (uuid), title (text), content (text), created_at, updated_at</span></div>`;
-                return;
-            }
-            document.getElementById('notes-list').innerHTML = (data || []).map(n => `
-                <div onclick="openNote('${n.id}')" class="p-3 mx-1 rounded-lg cursor-pointer transition flex flex-col gap-1 ${activeNoteId === n.id ? 'bg-blue-600/20 border border-blue-500/30' : 'hover:bg-slate-700/50'}">
-                    <div class="font-bold text-sm truncate ${activeNoteId === n.id ? 'text-blue-200' : 'text-slate-300'}">${n.title || 'Untitled'}</div>
-                    <div class="text-[10px] text-slate-500">${new Date(n.updated_at || n.created_at).toLocaleDateString()}</div>
-                </div>`).join('') || '<div class="text-slate-600 text-xs text-center pt-8">No notes yet</div>';
-        } catch(e) {
-            console.error('Notes fetch error:', e);
-        }
-    }
-
-    async function createNewNote() {
-        try {
-            const { data, error } = await sb.from('notes').insert([{
-                title: 'Untitled Note',
-                content: '',
-                // ✅ FIX 8: updated_at must be set manually if your table doesn't have auto-triggers
-                updated_at: new Date().toISOString()
-            }]).select();
-            if (error) { alert('Could not create note: ' + error.message); return; }
-            if (data && data[0]) { await loadNotes(); openNote(data[0].id); }
-        } catch(e) { alert('Error: ' + e.message); }
-    }
-
-    function openNote(id) {
-        activeNoteId = id;
-        sb.from('notes').select('*').eq('id', id).single().then(({ data, error }) => {
-            if (error || !data) { console.error('Open note error:', error); return; }
-            document.getElementById('editor-empty').classList.add('hidden');
-            document.getElementById('editor-main').classList.remove('hidden');
-            document.getElementById('editor-main').classList.add('flex');
-            document.getElementById('note-title').value = data.title || '';
-            document.getElementById('note-content').value = data.content || '';
-            loadNotes();
-        });
-    }
-
-    async function autoSave() {
-        document.getElementById('save-status').innerText = "Saving...";
-        if (saveTimeout) clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(async () => {
-            try {
-                const { error } = await sb.from('notes').update({
-                    title: document.getElementById('note-title').value,
-                    content: document.getElementById('note-content').value,
-                    updated_at: new Date().toISOString()
-                }).eq('id', activeNoteId);
-                document.getElementById('save-status').innerText = error ? "❌ Save failed" : "Saved";
-                if (!error) loadNotes();
-            } catch(e) {
-                document.getElementById('save-status').innerText = "❌ Error";
-            }
-        }, 1200);
-    }
-
-    async function deleteCurrentNote() {
-        if (!confirm("Delete this note permanently?")) return;
-        await sb.from('notes').delete().eq('id', activeNoteId);
-        activeNoteId = null;
-        document.getElementById('editor-main').classList.add('hidden');
-        document.getElementById('editor-main').classList.remove('flex');
-        document.getElementById('editor-empty').classList.remove('hidden');
-        loadNotes();
-    }
-
-    // ============================================================
-    // AI HUMANIZER
-    // ✅ FIX 9: The Undetectable AI API cannot be called from a browser due to CORS.
-    //    Two options below:
-    //    A) humanizeWithClaude() — uses Anthropic API (works in Claude.ai artifacts)
-    //    B) If you want Undetectable, you MUST proxy it through a Supabase Edge Function.
-    //       See comment below for the Edge Function code.
-    // ============================================================
-    async function humanizeWithClaude() {
-        const textArea = document.getElementById('note-content');
-        const text = textArea.value.trim();
-        if (!text) { alert("Write something first!"); return; }
-        showLoader(true, "Humanizing with AI...");
-        try {
-            const res = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-5-20250929',
-                    max_tokens: 2000,
-                    messages: [{
-                        role: 'user',
-                        content: `Rewrite the following text to sound completely natural and human-written. Remove any robotic or AI-sounding patterns, vary sentence structure, use contractions naturally, and match a conversational but clear tone. Preserve all the original information and meaning. Return ONLY the rewritten text with no commentary:\n\n${text}`
-                    }]
-                })
-            });
-            const data = await res.json();
-            const output = data?.content?.[0]?.text;
-            if (output) {
-                textArea.value = output;
-                autoSave();
-            } else {
-                alert("AI error: " + JSON.stringify(data?.error || data));
-            }
-        } catch(e) {
-            alert("Connection error: " + e.message);
-        }
-        showLoader(false);
-    }
-
-    // Standalone humanizer (from sidebar or modal)
-    function showHumanizerPanel() {
-        // If a note is open, pre-fill the modal with it
-        const noteContent = document.getElementById('note-content')?.value || '';
-        document.getElementById('humanizer-input').value = noteContent;
-        document.getElementById('humanizer-result').classList.add('hidden');
-        document.getElementById('humanizer-modal').classList.remove('hidden');
-    }
-
-    async function humanizeStandalone() {
-        const text = document.getElementById('humanizer-input').value.trim();
-        if (!text) { alert("Enter some text first!"); return; }
-        showLoader(true, "Humanizing...");
-        try {
-            const res = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-5-20250929',
-                    max_tokens: 2000,
-                    messages: [{
-                        role: 'user',
-                        content: `Rewrite the following text to sound completely natural and human-written. Remove AI-sounding patterns, vary sentence structure, use contractions naturally. Preserve all meaning. Return ONLY the rewritten text:\n\n${text}`
-                    }]
-                })
-            });
-            const data = await res.json();
-            const output = data?.content?.[0]?.text;
-            if (output) {
-                document.getElementById('humanizer-output').value = output;
-                document.getElementById('humanizer-result').classList.remove('hidden');
-            } else {
-                alert("AI error: " + JSON.stringify(data?.error || data));
-            }
-        } catch(e) { alert("Error: " + e.message); }
-        showLoader(false);
-    }
-
-    function copyHumanizerResult() {
-        const text = document.getElementById('humanizer-output').value;
-        navigator.clipboard.writeText(text).then(() => alert("Copied!")).catch(() => {
-            document.getElementById('humanizer-output').select();
-            document.execCommand('copy');
-            alert("Copied!");
-        });
-    }
-
-    /* ============================================================
-    NOTE: If you want to use Undetectable.ai specifically, create a
-    Supabase Edge Function in your dashboard:
-
-    File: supabase/functions/humanize/index.ts
-    ---
-    import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-    serve(async (req) => {
-      const { text } = await req.json();
-      const res = await fetch('https://api.undetectable.ai/api/v2/humanize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'api-key': 'YOUR_KEY' },
-        body: JSON.stringify({ content: text, readability: 'High School', purpose: 'General Writing' })
-      });
-      const data = await res.json();
-      return new Response(JSON.stringify(data), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+// ── AI ──
+function openHumanizer() { document.getElementById('humanizer-input').value=''; document.getElementById('humanizer-result').style.display='none'; document.getElementById('humanizer-modal').classList.remove('hidden'); }
+function humanizeNote() { document.getElementById('humanizer-input').value = document.getElementById('note-content').value; document.getElementById('humanizer-result').style.display='none'; document.getElementById('humanizer-modal').classList.remove('hidden'); }
+async function runHumanizer() {
+  const text = document.getElementById('humanizer-input').value.trim();
+  if (!text) { showToast('Enter some text first', 'error'); return; }
+  showLoader(true, 'Humanizing…');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-5-20250929', max_tokens:2048, messages:[{ role:'user', content:`Rewrite this to sound completely natural and human-written. Vary sentence lengths, use contractions naturally, avoid robotic phrasing. Preserve all meaning. Return ONLY the rewritten text:\n\n${text}` }] })
     });
-    ---
-    Then call it with:
-    const res = await sb.functions.invoke('humanize', { body: { text } });
-    ============================================================ */
+    const d = await res.json();
+    const out = d?.content?.[0]?.text;
+    if (out) { document.getElementById('humanizer-output').textContent = out; document.getElementById('humanizer-result').style.display='block'; }
+    else showToast('AI error', 'error');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  showLoader(false);
+}
+function insertHumanizerToNote() {
+  document.getElementById('note-content').value = document.getElementById('humanizer-output').textContent;
+  autoSave(); closeModal('humanizer-modal'); showToast('Inserted into note ✓', 'success');
+}
+function openSummarizer() { document.getElementById('summarizer-input').value=''; document.getElementById('summarizer-result').style.display='none'; document.getElementById('summarizer-modal').classList.remove('hidden'); }
+function summarizeNote() { document.getElementById('summarizer-input').value = document.getElementById('note-content').value; document.getElementById('summarizer-result').style.display='none'; document.getElementById('summarizer-modal').classList.remove('hidden'); }
+async function runSummarizer() {
+  const text = document.getElementById('summarizer-input').value.trim();
+  if (!text) { showToast('Enter some text first', 'error'); return; }
+  showLoader(true, 'Summarizing…');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-5-20250929', max_tokens:1024, messages:[{ role:'user', content:`Write a clear bullet-point summary capturing all key points. Return ONLY the summary:\n\n${text}` }] })
+    });
+    const d = await res.json();
+    const out = d?.content?.[0]?.text;
+    if (out) { document.getElementById('summarizer-output').textContent = out; document.getElementById('summarizer-result').style.display='block'; }
+    else showToast('AI error', 'error');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  showLoader(false);
+}
+function copyResult(id) { navigator.clipboard.writeText(document.getElementById(id).textContent); showToast('Copied ✓', 'success'); }
 
-    </script>
+// ── CONTEXT MENU ──
+let ctxId = null;
+function noteCtx(e, id) {
+  e.preventDefault(); ctxId = id;
+  const m = document.getElementById('ctx-menu');
+  m.classList.remove('hidden');
+  m.style.left = Math.min(e.clientX, window.innerWidth-160) + 'px';
+  m.style.top  = Math.min(e.clientY, window.innerHeight-160) + 'px';
+  document.getElementById('ctx-pin').innerHTML = `<i class="ri-pushpin-line"></i> ${pinnedNotes.has(id)?'Unpin':'Pin'}`;
+}
+document.getElementById('ctx-open').onclick = () => { if(ctxId){openNote(ctxId);} document.getElementById('ctx-menu').classList.add('hidden'); };
+document.getElementById('ctx-pin').onclick = () => { if(ctxId){const prev=activeNoteId;activeNoteId=ctxId;togglePin();activeNoteId=prev;} document.getElementById('ctx-menu').classList.add('hidden'); };
+document.getElementById('ctx-export').onclick = () => { if(ctxId){const n=allNotes.find(x=>x.id===ctxId);if(n){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([`# ${n.title}\n\n${n.content}`],{type:'text/markdown'}));a.download=`${n.title||'note'}.md`;a.click();showToast('Exported ✓','success');}} document.getElementById('ctx-menu').classList.add('hidden'); };
+document.getElementById('ctx-delete').onclick = () => { if(ctxId){activeNoteId=ctxId;deleteCurrentNote();} document.getElementById('ctx-menu').classList.add('hidden'); };
+document.addEventListener('click', () => document.getElementById('ctx-menu').classList.add('hidden'));
+document.addEventListener('keydown', e => { if(e.key==='Escape'){document.getElementById('ctx-menu').classList.add('hidden');document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'));}});
+</script>
 </body>
 </html>
