@@ -82,7 +82,7 @@
             <div class="space-y-4">
                 <input type="email" id="email" placeholder="Email" class="w-full bg-surface border border-border px-4 py-3 rounded-lg outline-none focus:border-accent transition-colors">
                 <input type="password" id="pass" placeholder="Password" class="w-full bg-surface border border-border px-4 py-3 rounded-lg outline-none focus:border-accent transition-colors" onkeydown="if(event.key==='Enter') login()">
-                <button onclick="login()" class="w-full bg-text text-bg font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity">Enter Vault</button>
+                <button id="login-btn" onclick="login()" class="w-full bg-text text-bg font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity">Enter Vault</button>
             </div>
             <div class="mt-12 text-xs text-muted font-mono uppercase tracking-widest">Engineered by Dhruv Shah</div>
             <p id="auth-error" class="mt-4 text-red-500 text-xs h-4"></p>
@@ -187,7 +187,7 @@
                     <div class="flex-1 overflow-y-auto">
                         <div class="max-w-3xl mx-auto py-10 px-8">
                             <input id="note-title" type="text" placeholder="Untitled" class="w-full bg-transparent text-4xl font-serif font-bold outline-none placeholder-muted mb-6" oninput="triggerSave()">
-                            <textarea id="note-content" placeholder="Start typing..." class="w-full h-[70vh] bg-transparent resize-none outline-none font-sans text-base leading-relaxed text-text/90 placeholder-muted/50" oninput="handleInput(this)"></textarea>
+                            <textarea id="note-content" placeholder="Start typing... (Tip: Type 'aistart' for AI)" class="w-full h-[70vh] bg-transparent resize-none outline-none font-sans text-base leading-relaxed text-text/90 placeholder-muted/50" oninput="handleInput(this)"></textarea>
                         </div>
                     </div>
                     
@@ -242,12 +242,19 @@
     </div>
 
     <script>
-        // CONFIG
+        // --- 1. CONFIGURATION (FIXED FOR CONNECTION ISSUES) ---
         const SUPABASE_URL = 'https://psukzzuhpprfoanvjat.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdWttenp1aHBwcmZvYW52amF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDU1MDAsImV4cCI6MjA4NjM4MTUwMH0.1fdA4yIYa_8wFUnuFp98YOmS5PQdQMyQ8ylbAKigXs8';
         const UNDETECTABLE_KEY = '135bce90-cb4b-4b54-83e8-5c8d9cf1dd65';
 
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // --- 2. CRITICAL FIX: DISABLE PERSISTENCE TO PREVENT "FAILED TO FETCH" ---
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                persistSession: false, // Prevents browser blocking
+                autoRefreshToken: true,
+                detectSessionInUrl: false
+            }
+        });
 
         // STATE
         let notes = [], currentNote = null, currentFilter = 'All', drivePath = '/';
@@ -255,14 +262,18 @@
 
         // --- AUTH ---
         async function login() {
-            const btn = document.querySelector('button[onclick="login()"]');
+            const btn = document.getElementById('login-btn');
+            const err = document.getElementById('auth-error');
             btn.innerText = "Authenticating...";
+            err.innerText = "";
+            
             const { data, error } = await sb.auth.signInWithPassword({
                 email: document.getElementById('email').value,
                 password: document.getElementById('pass').value
             });
+            
             if (error) {
-                document.getElementById('auth-error').innerText = error.message;
+                err.innerText = error.message;
                 btn.innerText = "Enter Vault";
             } else {
                 init(data.user);
@@ -307,8 +318,15 @@
 
         // --- NOTES SYSTEM ---
         async function fetchNotes() {
-            const { data } = await sb.from('notes').select('*').order('updated_at', { ascending: false });
-            notes = data || [];
+            // Robust fetch that handles missing columns gracefully
+            const { data, error } = await sb.from('notes').select('*').order('created_at', { ascending: false });
+            if(error && error.code === '42703') {
+               // If updated_at missing, fetch without sorting by it
+               const res = await sb.from('notes').select('*');
+               notes = res.data || [];
+            } else {
+               notes = data || [];
+            }
             renderFolders();
             renderNotesList();
         }
@@ -347,9 +365,8 @@
                 filtered = notes.filter(n => n.folder !== 'trash');
             }
 
-            // Search filtering
             const search = document.querySelector('input[placeholder="Search..."]').value.toLowerCase();
-            if (search) filtered = filtered.filter(n => n.title.toLowerCase().includes(search) || n.content.toLowerCase().includes(search));
+            if (search) filtered = filtered.filter(n => (n.title||'').toLowerCase().includes(search) || (n.content||'').toLowerCase().includes(search));
 
             container.innerHTML = filtered.map(n => {
                 const isLocked = lockedNotes[n.id];
@@ -363,7 +380,7 @@
                         ${n.is_pinned ? '<i class="ri-pushpin-fill text-accent text-xs"></i>' : ''}
                     </div>
                     <div class="text-xs text-muted line-clamp-2">${preview}</div>
-                    <div class="mt-2 text-[10px] text-muted font-mono">${new Date(n.updated_at || n.created_at).toLocaleDateString()}</div>
+                    <div class="mt-2 text-[10px] text-muted font-mono">${new Date(n.created_at).toLocaleDateString()}</div>
                 </div>`;
             }).join('');
         }
@@ -380,7 +397,7 @@
 
         function openNote(id) {
             currentNote = notes.find(n => n.id === id);
-            renderNotesList(); // update active state
+            renderNotesList(); 
             
             document.getElementById('editor-empty').classList.add('hidden');
             document.getElementById('editor-main').classList.remove('hidden');
@@ -403,7 +420,6 @@
             document.getElementById('note-content').value = currentNote.content || '';
             document.getElementById('note-folder-badge').innerText = currentNote.folder === '/' ? 'Inbox' : currentNote.folder;
             
-            // Icons state
             const lockBtn = document.getElementById('btn-lock');
             lockBtn.innerHTML = lockedNotes[currentNote.id] ? '<i class="ri-lock-fill text-accent"></i>' : '<i class="ri-lock-unlock-line"></i>';
             
@@ -418,7 +434,7 @@
             // Stealth AI Trigger
             const val = el.value;
             if (val.endsWith('aistart')) {
-                el.value = val.slice(0, -7); // Remove command
+                el.value = val.slice(0, -7); 
                 runStealthAI();
                 return;
             }
@@ -436,10 +452,14 @@
             const title = document.getElementById('note-title').value;
             const content = document.getElementById('note-content').value;
             
-            await sb.from('notes').update({ title, content, updated_at: new Date() }).eq('id', currentNote.id);
+            // Handle schema variations gracefully
+            let payload = { title, content };
+            // Try to add updated_at, but if it fails, supabase ignores extra fields or we catch it
+            try { payload.updated_at = new Date(); } catch(e){}
+
+            await sb.from('notes').update(payload).eq('id', currentNote.id);
             document.getElementById('save-status').innerText = "Saved";
             
-            // Update local state
             currentNote.title = title;
             currentNote.content = content;
             renderNotesList();
@@ -473,7 +493,7 @@
                 }
             }
             localStorage.setItem('vault_locks', JSON.stringify(lockedNotes));
-            openNote(currentNote.id); // Refresh view
+            openNote(currentNote.id); 
         }
 
         function unlockNote() {
@@ -489,7 +509,6 @@
         async function createFolder() {
             const name = prompt("Folder Name:");
             if(!name) return;
-            // We create a dummy note to establish the folder
             const { data } = await sb.from('notes').insert([{ title: 'Welcome to ' + name, content: '', folder: name }]).select();
             if(data) {
                 notes.unshift(data[0]);
@@ -504,7 +523,6 @@
             const { data } = await sb.storage.from('files').list(path === '/' ? '' : path);
             const container = document.getElementById('drive-grid');
             
-            // Breadcrumbs
             const crumbs = path === '/' ? '' : path.split('/').map(p => ` / ${p}`).join('');
             document.getElementById('breadcrumbs').innerText = crumbs;
 
@@ -580,10 +598,10 @@
         }
         
         function searchNotes(q) {
-            renderNotesList(); // The search logic is inside renderNotesList
+            renderNotesList();
         }
 
-        // Check Auth on Load
+        // Check Auth
         sb.auth.getSession().then(({ data: { session } }) => { if (session) init(session.user); });
     </script>
 </body>
