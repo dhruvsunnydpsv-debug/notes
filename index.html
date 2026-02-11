@@ -3,759 +3,588 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verix Vault | Premium</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+<title>Vault OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    bg: 'var(--bg)',
+                    surface: 'var(--surface)',
+                    border: 'var(--border)',
+                    text: 'var(--text)',
+                    muted: 'var(--muted)',
+                    accent: 'var(--accent)',
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                    serif: ['Instrument Serif', 'serif'],
+                    mono: ['JetBrains Mono', 'monospace'],
+                }
+            }
+        }
+    }
+</script>
 <style>
-:root {
-  --bg: #050505;
-  --surface: #0f1012;
-  --surface-hover: #18191d;
-  --border: #222326;
-  --primary: #3b82f6; /* Premium Blue */
-  --primary-glow: rgba(59, 130, 246, 0.2);
-  --text-main: #ededed;
-  --text-muted: #888;
-  --danger: #ef4444;
-  --success: #10b981;
-  --font-main: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --font-serif: 'Playfair Display', serif;
-}
+    :root {
+        --bg: #09090b;
+        --surface: #121214;
+        --border: #27272a;
+        --text: #e4e4e7;
+        --muted: #71717a;
+        --accent: #3b82f6;
+    }
+    
+    .light-mode {
+        --bg: #ffffff;
+        --surface: #f4f4f5;
+        --border: #e4e4e7;
+        --text: #18181b;
+        --muted: #a1a1aa;
+        --accent: #2563eb;
+    }
 
-* { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-font-smoothing: antialiased; }
-body { background-color: var(--bg); color: var(--text-main); font-family: var(--font-main); height: 100vh; overflow: hidden; display: flex; }
+    body { background-color: var(--bg); color: var(--text); transition: background-color 0.3s, color 0.3s; }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #444; }
+    /* Utilities */
+    .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(10px); border: 1px solid var(--border); }
+    .light-mode .glass { background: rgba(255,255,255,0.8); border-color: var(--border); }
+    
+    .sidebar-item { @apply flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer text-sm font-medium text-muted transition-all hover:bg-surface hover:text-text; }
+    .sidebar-item.active { @apply bg-surface text-accent; }
+    
+    .note-card { @apply p-4 border-b border-border cursor-pointer hover:bg-surface transition-all; }
+    .note-card.active { @apply bg-surface border-l-2 border-l-accent; }
 
-/* UTILS */
-.hidden { display: none !important; }
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-2 { gap: 0.5rem; }
-.glass { background: rgba(20, 20, 23, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
-
-/* --- LOGIN SCREEN --- */
-#auth-screen {
-  position: fixed; inset: 0; z-index: 1000; background: #000;
-  display: flex; align-items: center; justify-content: center;
-  background-image: radial-gradient(circle at 50% 0%, #1e2536 0%, #000 70%);
-}
-.auth-box {
-  width: 420px; padding: 40px; border-radius: 24px;
-  background: rgba(15, 16, 18, 0.6); border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5); backdrop-filter: blur(20px);
-  text-align: center; animation: fadeIn 0.8s ease-out;
-}
-.auth-logo { font-family: var(--font-serif); font-size: 2.5rem; background: linear-gradient(to right, #fff, #888); -webkit-background-clip: text; color: transparent; margin-bottom: 5px; }
-.auth-credit { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 30px; letter-spacing: 1px; text-transform: uppercase; }
-.input-group { position: relative; margin-bottom: 15px; }
-.input-field {
-  width: 100%; background: #0a0a0a; border: 1px solid var(--border);
-  padding: 14px 16px; border-radius: 12px; color: #fff; font-size: 0.95rem;
-  transition: 0.3s;
-}
-.input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-glow); }
-.btn-primary {
-  width: 100%; padding: 14px; background: var(--primary); color: #fff;
-  border: none; border-radius: 12px; font-weight: 600; cursor: pointer;
-  margin-top: 10px; transition: 0.2s; font-size: 1rem;
-}
-.btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
-
-/* --- APP LAYOUT --- */
-#app { width: 100%; height: 100%; display: none; }
-
-/* SIDEBAR */
-#sidebar {
-  width: 260px; background: var(--surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; padding: 20px 12px; transition: 0.3s;
-}
-.brand { font-family: var(--font-serif); font-size: 1.5rem; padding: 0 12px 20px; color: #fff; letter-spacing: -0.5px; }
-.nav-item {
-  display: flex; align-items: center; gap: 12px; padding: 12px;
-  color: var(--text-muted); border-radius: 10px; cursor: pointer;
-  font-size: 0.9rem; font-weight: 500; transition: 0.2s; margin-bottom: 4px;
-}
-.nav-item:hover { background: var(--surface-hover); color: #fff; }
-.nav-item.active { background: rgba(59, 130, 246, 0.1); color: var(--primary); }
-.nav-item i { font-size: 1.1rem; }
-.user-profile {
-  margin-top: auto; padding: 12px; background: var(--bg); border: 1px solid var(--border);
-  border-radius: 12px; display: flex; align-items: center; gap: 10px;
-}
-.avatar { width: 32px; height: 32px; background: linear-gradient(45deg, var(--primary), #8b5cf6); border-radius: 50%; display: grid; place-items: center; font-weight: bold; font-size: 0.8rem; }
-.user-info { display: flex; flex-direction: column; overflow: hidden; }
-.user-email { font-size: 0.75rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; }
-.logout-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.2rem; margin-left: auto; }
-
-/* MAIN CONTENT */
-#main { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
-
-/* TOOLBAR */
-.top-bar {
-  height: 60px; border-bottom: 1px solid var(--border); display: flex;
-  align-items: center; justify-content: space-between; padding: 0 24px;
-  background: rgba(5, 5, 5, 0.8); backdrop-filter: blur(10px);
-}
-.breadcrumb { font-size: 0.9rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
-.breadcrumb span { color: #fff; }
-.action-btn {
-  width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center;
-  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
-  cursor: pointer; transition: 0.2s;
-}
-.action-btn:hover { color: #fff; border-color: #444; }
-
-/* FILE GRID (DRIVE) */
-#drive-view { padding: 24px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; align-content: start; }
-.file-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-  padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px;
-  cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;
-}
-.file-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
-.file-icon { font-size: 2.5rem; }
-.file-name { font-size: 0.8rem; color: var(--text-muted); text-align: center; word-break: break-all; }
-.drag-overlay {
-  position: absolute; inset: 0; background: rgba(59, 130, 246, 0.9); z-index: 500;
-  display: flex; align-items: center; justify-content: center; color: white;
-  font-size: 1.5rem; font-weight: bold; opacity: 0; pointer-events: none; transition: 0.3s;
-}
-.drag-active .drag-overlay { opacity: 1; pointer-events: all; }
-
-/* NOTES LAYOUT */
-#notes-view { display: flex; height: 100%; }
-.notes-list-col {
-  width: 300px; background: var(--surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-}
-.notes-header { padding: 20px; border-bottom: 1px solid var(--border); }
-.notes-search {
-  width: 100%; background: var(--bg); border: 1px solid var(--border);
-  padding: 10px 12px; border-radius: 8px; color: #fff; font-family: var(--font-main);
-  margin-top: 10px;
-}
-.note-item {
-  padding: 16px 20px; border-bottom: 1px solid var(--border); cursor: pointer;
-  transition: 0.2s; position: relative;
-}
-.note-item:hover { background: var(--surface-hover); }
-.note-item.active { background: #15161a; border-left: 3px solid var(--primary); }
-.note-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; display: flex; justify-content: space-between; }
-.note-preview { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.note-meta { font-size: 0.7rem; color: #555; margin-top: 6px; display: flex; justify-content: space-between; }
-
-/* EDITOR */
-.editor-col { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
-.editor-toolbar {
-  padding: 10px 24px; border-bottom: 1px solid var(--border); display: flex;
-  gap: 8px; align-items: center; background: rgba(5,5,5,0.9);
-}
-.tool-btn {
-  background: none; border: none; color: var(--text-muted); cursor: pointer;
-  padding: 6px; border-radius: 4px; transition: 0.2s;
-}
-.tool-btn:hover { color: #fff; background: var(--surface); }
-.editor-meta { margin-left: auto; font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); }
-#note-title-input {
-  background: none; border: none; color: #fff; font-size: 2rem; font-weight: 700;
-  padding: 30px 40px 10px; font-family: var(--font-serif); width: 100%;
-}
-#note-content {
-  flex: 1; background: none; border: none; color: var(--text-main); font-size: 1.05rem;
-  line-height: 1.8; padding: 0 40px 40px; resize: none; font-family: 'Inter', sans-serif;
-}
-#note-content::placeholder { color: #333; }
-
-/* LOCKED NOTE STATE */
-.locked-overlay {
-  position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column;
-  align-items: center; justify-content: center; z-index: 10;
-}
-
-/* CONTEXT MENU */
-.ctx-menu {
-  position: fixed; background: #1a1b1e; border: 1px solid var(--border); border-radius: 8px;
-  width: 180px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 2000; padding: 6px;
-  animation: fadeIn 0.1s ease;
-}
-.ctx-item {
-  padding: 8px 12px; font-size: 0.85rem; color: #ccc; cursor: pointer; border-radius: 4px; display: flex; gap: 8px; align-items: center;
-}
-.ctx-item:hover { background: var(--primary); color: #fff; }
-.ctx-item.delete:hover { background: var(--danger); }
-.ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
-
-/* MODALS */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
-  z-index: 3000; display: flex; align-items: center; justify-content: center;
-}
-.modal {
-  width: 400px; background: #111; border: 1px solid var(--border); border-radius: 16px;
-  padding: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.modal h3 { margin-bottom: 16px; font-weight: 600; color: #fff; }
-.modal input, .modal select {
-  width: 100%; background: #000; border: 1px solid var(--border); padding: 12px;
-  border-radius: 8px; color: #fff; margin-bottom: 16px;
-}
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.btn-ghost { background: transparent; border: 1px solid var(--border); color: #ccc; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
-.btn-accent { background: var(--primary); border: none; color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
-
-/* LOADING & TOAST */
-#loader { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; transition: opacity 0.5s; }
-.spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s infinite linear; }
-#toast {
-  position: fixed; bottom: 30px; right: 30px; background: #1a1b1e; border: 1px solid var(--border);
-  padding: 12px 20px; border-radius: 10px; color: #fff; display: flex; align-items: center; gap: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: translateY(100px); opacity: 0; transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 5000;
-}
-#toast.active { transform: translateY(0); opacity: 1; }
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-@keyframes spin { to { transform: rotate(360deg); } }
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeIn 0.4s ease-out; }
+    
+    .loader { border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
-<body ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+<body class="h-screen flex overflow-hidden font-sans text-sm selection:bg-accent selection:text-white">
 
-<div id="loader">
-  <div class="spinner"></div>
-  <div style="font-family: var(--font-mono); font-size: 0.8rem; color: #666; letter-spacing: 2px;">VERIX VAULT</div>
-</div>
-
-<div id="toast"><i class="ri-information-line" style="color:var(--primary)"></i> <span id="toast-msg">Notification</span></div>
-
-<div id="auth-screen">
-  <div class="auth-box">
-    <div class="auth-logo">Verix</div>
-    <div class="auth-credit">Created by Dhruv Shah</div>
-    <div class="input-group">
-      <input type="email" id="email" class="input-field" placeholder="Email Address">
-    </div>
-    <div class="input-group">
-      <input type="password" id="pass" class="input-field" placeholder="Password" onkeydown="if(event.key==='Enter') login()">
-    </div>
-    <button class="btn-primary" onclick="login()">Unlock Vault</button>
-    <p id="auth-error" style="color: var(--danger); margin-top: 15px; font-size: 0.8rem; height: 1rem;"></p>
-  </div>
-</div>
-
-<div id="app">
-  <nav id="sidebar">
-    <div class="brand">Verix.</div>
-    <div class="nav-item active" id="nav-drive" onclick="switchView('drive')"><i class="ri-hard-drive-2-line"></i> Drive</div>
-    <div class="nav-item" id="nav-notes" onclick="switchView('notes')"><i class="ri-sticky-note-line"></i> Notes</div>
-    <div class="nav-item" onclick="openGrammarCheck()"><i class="ri-text"></i> Grammar</div>
-    
-    <div class="user-profile">
-      <div class="avatar" id="u-av">U</div>
-      <div class="user-info">
-        <div class="user-email" id="u-email">user@verix.com</div>
-      </div>
-      <button class="logout-btn" onclick="logout()"><i class="ri-logout-box-line"></i></button>
-    </div>
-  </nav>
-
-  <main id="main">
-    
-    <div id="view-drive" style="display:flex; flex-direction:column; height:100%;">
-      <div class="top-bar">
-        <div class="breadcrumb">
-          <i class="ri-home-4-fill" style="cursor:pointer" onclick="openPath('/')"></i>
-          <span id="breadcrumbs"></span>
+    <div id="auth-screen" class="fixed inset-0 z-50 bg-bg flex flex-col items-center justify-center">
+        <div class="w-full max-w-sm p-8 animate-in text-center">
+            <div class="mb-8 font-serif text-5xl italic tracking-tight text-text">Vault.</div>
+            <div class="space-y-4">
+                <input type="email" id="email" placeholder="Email" class="w-full bg-surface border border-border px-4 py-3 rounded-lg outline-none focus:border-accent transition-colors">
+                <input type="password" id="pass" placeholder="Password" class="w-full bg-surface border border-border px-4 py-3 rounded-lg outline-none focus:border-accent transition-colors" onkeydown="if(event.key==='Enter') login()">
+                <button onclick="login()" class="w-full bg-text text-bg font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity">Enter Vault</button>
+            </div>
+            <div class="mt-12 text-xs text-muted font-mono uppercase tracking-widest">Engineered by Dhruv Shah</div>
+            <p id="auth-error" class="mt-4 text-red-500 text-xs h-4"></p>
         </div>
-        <div style="display:flex; gap:10px;">
-          <div class="action-btn" onclick="createFolder()" title="New Folder"><i class="ri-folder-add-line"></i></div>
-          <div class="action-btn" onclick="document.getElementById('file-upload').click()" title="Upload"><i class="ri-upload-cloud-2-line"></i></div>
-          <input type="file" id="file-upload" hidden multiple onchange="uploadFiles(this.files)">
-        </div>
-      </div>
-      <div id="drive-view"></div>
-      <div class="drag-overlay" id="drag-overlay">Drop files to upload</div>
     </div>
 
-    <div id="view-notes" class="hidden">
-      <div class="notes-list-col">
-        <div class="notes-header">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="font-weight:600">Library</h3>
-            <div class="action-btn" onclick="createNote()"><i class="ri-add-line"></i></div>
-          </div>
-          <input type="text" class="notes-search" placeholder="Search..." oninput="filterNotes(this.value)">
-        </div>
-        <div id="notes-list" style="overflow-y:auto; flex:1;"></div>
-      </div>
-      
-      <div class="editor-col">
-        <div id="locked-overlay" class="locked-overlay hidden">
-          <i class="ri-lock-2-fill" style="font-size:3rem; color:var(--text-muted); margin-bottom:1rem;"></i>
-          <h2 style="margin-bottom:1rem;">Protected Note</h2>
-          <input type="password" id="unlock-pass" placeholder="Enter Password" class="input-field" style="width:200px; text-align:center;">
-          <button class="btn-primary" style="width:200px; margin-top:10px;" onclick="unlockNote()">Unlock</button>
-        </div>
+    <div id="app" class="hidden w-full h-full flex">
+        
+        <aside class="w-64 bg-bg border-r border-border flex flex-col">
+            <div class="p-5 flex items-center justify-between">
+                <span class="font-serif text-2xl italic">Vault.</span>
+                <button onclick="toggleTheme()" class="text-muted hover:text-text"><i class="ri-contrast-line text-lg"></i></button>
+            </div>
 
-        <div class="editor-toolbar">
-          <button class="tool-btn" onclick="insertMD('**')"><i class="ri-bold"></i></button>
-          <button class="tool-btn" onclick="insertMD('*')"><i class="ri-italic"></i></button>
-          <button class="tool-btn" onclick="insertMD('`')"><i class="ri-code-s-slash-line"></i></button>
-          <button class="tool-btn" onclick="toggleFocusMode()"><i class="ri-fullscreen-line"></i></button>
-          <div style="width:1px; height:20px; background:var(--border); margin:0 8px;"></div>
-          <button class="tool-btn" onclick="toggleLock()" id="btn-lock"><i class="ri-lock-unlock-line"></i></button>
-          <span class="editor-meta" id="editor-stats">0 words</span>
-          <span class="editor-meta" id="save-indicator" style="margin-left:10px; color:var(--primary);">Saved</span>
-        </div>
-        <input id="note-title-input" placeholder="Untitled" oninput="triggerSave()">
-        <textarea id="note-content" placeholder="Start typing... (Tip: Type 'aistart' for AI)" oninput="handleInput(this)"></textarea>
-      </div>
+            <div class="px-3 pb-4 border-b border-border space-y-1">
+                <div onclick="switchApp('notes')" id="nav-notes" class="sidebar-item active">
+                    <i class="ri-booklet-line"></i> <span>Notes</span>
+                </div>
+                <div onclick="switchApp('drive')" id="nav-drive" class="sidebar-item">
+                    <i class="ri-hard-drive-2-line"></i> <span>Drive</span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto py-4 px-3">
+                
+                <div id="notes-sidebar" class="space-y-1">
+                    <div class="text-xs font-bold text-muted uppercase tracking-wider px-3 mb-2 flex justify-between group">
+                        <span>Folders</span>
+                        <i onclick="createFolder()" class="ri-add-line cursor-pointer hover:text-text opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                    </div>
+                    
+                    <div id="folder-list" class="space-y-1">
+                        </div>
+
+                    <div class="mt-6 text-xs font-bold text-muted uppercase tracking-wider px-3 mb-2">System</div>
+                    <div onclick="filterNotes('trash')" class="sidebar-item group">
+                        <i class="ri-delete-bin-line group-hover:text-red-400"></i> <span>Trash</span>
+                    </div>
+                </div>
+
+                <div id="drive-sidebar" class="hidden space-y-4 px-3">
+                    <div class="p-4 rounded-xl bg-surface border border-border">
+                        <div class="text-xs text-muted mb-1">Storage Used</div>
+                        <div class="text-xl font-medium">12%</div>
+                        <div class="w-full h-1 bg-border rounded-full mt-3 overflow-hidden">
+                            <div class="h-full bg-accent w-[12%]"></div>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('upload-input').click()" class="w-full py-2 bg-surface border border-border rounded-lg hover:border-accent hover:text-accent transition-colors text-sm font-medium flex items-center justify-center gap-2">
+                        <i class="ri-upload-cloud-line"></i> Upload Files
+                    </button>
+                    <input type="file" id="upload-input" class="hidden" multiple onchange="uploadFiles(this)">
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-border">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-accent to-purple-500 flex items-center justify-center text-white font-bold text-xs">D</div>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="text-xs font-medium truncate" id="user-email">user@vault.com</div>
+                    </div>
+                </div>
+                <div class="flex gap-1">
+                    <button onclick="openSettings()" class="flex-1 py-1.5 text-xs bg-surface rounded hover:bg-border transition-colors">Settings</button>
+                    <button onclick="logout()" class="flex-1 py-1.5 text-xs bg-surface rounded hover:bg-red-500/10 hover:text-red-500 transition-colors">Logout</button>
+                </div>
+            </div>
+        </aside>
+
+        <main id="app-notes" class="flex-1 flex overflow-hidden">
+            
+            <div class="w-72 border-r border-border bg-bg flex flex-col">
+                <div class="p-4 border-b border-border flex items-center gap-2">
+                    <i class="ri-search-line text-muted"></i>
+                    <input type="text" placeholder="Search..." class="bg-transparent outline-none w-full text-sm placeholder-muted" oninput="searchNotes(this.value)">
+                    <button onclick="createNote()" class="text-accent hover:text-white"><i class="ri-edit-box-line text-xl"></i></button>
+                </div>
+                <div id="note-list-container" class="flex-1 overflow-y-auto">
+                    </div>
+            </div>
+
+            <div class="flex-1 flex flex-col bg-surface relative">
+                
+                <div id="editor-empty" class="absolute inset-0 flex flex-col items-center justify-center text-muted">
+                    <i class="ri-quill-pen-line text-6xl opacity-20 mb-4"></i>
+                    <p>Select a note to view</p>
+                </div>
+
+                <div id="editor-main" class="hidden flex-col h-full">
+                    <div class="h-14 border-b border-border flex items-center justify-between px-6 bg-bg">
+                        <div class="flex items-center gap-2 text-muted">
+                            <span id="note-folder-badge" class="text-xs px-2 py-0.5 rounded bg-surface border border-border">Folder</span>
+                            <span id="save-status" class="text-xs">Saved</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="toggleLockNote()" id="btn-lock" title="Password Protect" class="w-8 h-8 rounded hover:bg-surface flex items-center justify-center text-muted transition-colors"><i class="ri-lock-unlock-line"></i></button>
+                            <button onclick="togglePinNote()" id="btn-pin" title="Pin Note" class="w-8 h-8 rounded hover:bg-surface flex items-center justify-center text-muted transition-colors"><i class="ri-pushpin-line"></i></button>
+                            <button onclick="deleteNote()" title="Move to Trash" class="w-8 h-8 rounded hover:bg-red-500/10 hover:text-red-500 flex items-center justify-center text-muted transition-colors"><i class="ri-delete-bin-line"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto">
+                        <div class="max-w-3xl mx-auto py-10 px-8">
+                            <input id="note-title" type="text" placeholder="Untitled" class="w-full bg-transparent text-4xl font-serif font-bold outline-none placeholder-muted mb-6" oninput="triggerSave()">
+                            <textarea id="note-content" placeholder="Start typing..." class="w-full h-[70vh] bg-transparent resize-none outline-none font-sans text-base leading-relaxed text-text/90 placeholder-muted/50" oninput="handleInput(this)"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="h-8 border-t border-border bg-bg flex items-center justify-between px-4 text-xs text-muted font-mono">
+                        <div id="word-count">0 words</div>
+                        <div>Markdown Supported</div>
+                    </div>
+                </div>
+
+                <div id="lock-screen" class="hidden absolute inset-0 z-20 bg-surface flex flex-col items-center justify-center">
+                    <i class="ri-lock-2-fill text-4xl text-muted mb-4"></i>
+                    <h3 class="text-lg font-medium mb-4">This note is password protected</h3>
+                    <input type="password" id="unlock-pass" placeholder="Enter Password" class="bg-bg border border-border px-3 py-2 rounded mb-3 w-48 text-center outline-none focus:border-accent">
+                    <button onclick="unlockNote()" class="bg-accent text-white px-4 py-2 rounded text-sm">Unlock</button>
+                </div>
+            </div>
+        </main>
+
+        <main id="app-drive" class="hidden flex-1 flex flex-col bg-surface">
+            <div class="h-14 border-b border-border bg-bg flex items-center justify-between px-6">
+                <div class="flex items-center gap-2 text-sm text-muted">
+                    <button onclick="loadDrive('/')" class="hover:text-text"><i class="ri-home-line"></i> Home</button>
+                    <span id="breadcrumbs"></span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="createDriveFolder()" class="w-8 h-8 rounded hover:bg-surface border border-transparent hover:border-border flex items-center justify-center"><i class="ri-folder-add-line"></i></button>
+                    <button onclick="refreshDrive()" class="w-8 h-8 rounded hover:bg-surface border border-transparent hover:border-border flex items-center justify-center"><i class="ri-refresh-line"></i></button>
+                </div>
+            </div>
+            <div id="drive-grid" class="flex-1 p-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 content-start overflow-y-auto">
+                </div>
+        </main>
     </div>
 
-  </main>
-</div>
-
-<div id="ctx-menu" class="ctx-menu hidden"></div>
-
-<div id="modal-overlay" class="modal-overlay hidden">
-  <div class="modal">
-    <h3 id="modal-title">Title</h3>
-    <div id="modal-content"></div>
-    <div class="modal-actions">
-      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn-accent" id="modal-confirm-btn">Confirm</button>
+    <div id="settings-modal" class="hidden fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center">
+        <div class="bg-bg border border-border rounded-xl w-96 p-6 shadow-2xl">
+            <h2 class="text-xl font-serif mb-6">Settings</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-muted uppercase">Change Password</label>
+                    <input type="password" id="new-pass" placeholder="New Password" class="w-full mt-1 bg-surface border border-border px-3 py-2 rounded outline-none focus:border-accent">
+                </div>
+                <button onclick="changePassword()" class="w-full bg-accent text-white py-2 rounded">Update Password</button>
+            </div>
+            <button onclick="document.getElementById('settings-modal').classList.add('hidden')" class="mt-4 w-full py-2 text-muted hover:text-text">Close</button>
+        </div>
     </div>
-  </div>
-</div>
 
-<script>
-// --- CONFIGURATION ---
-const SUPABASE_URL = 'https://psukmzzuhpprfoanvjat.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304';
+    <div id="toast" class="fixed bottom-6 right-6 bg-surface border border-border text-text px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3 z-[200]">
+        <i class="ri-notification-3-line text-accent"></i>
+        <span id="toast-msg">Notification</span>
+    </div>
 
-let sb;
-try {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true }
-  });
-} catch(e) { console.error("Init Error", e); }
+    <script>
+        // CONFIG
+        const SUPABASE_URL = 'https://psukzzuhpprfoanvjat.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdWttenp1aHBwcmZvYW52amF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDU1MDAsImV4cCI6MjA4NjM4MTUwMH0.1fdA4yIYa_8wFUnuFp98YOmS5PQdQMyQ8ylbAKigXs8';
+        const UNDETECTABLE_KEY = '135bce90-cb4b-4b54-83e8-5c8d9cf1dd65';
 
-// --- STATE ---
-let currentPath = '/';
-let allNotes = [];
-let activeNote = null;
-let saveTimer = null;
-let lockedNotes = JSON.parse(localStorage.getItem('verix_locks') || '{}'); // { noteId: 'password' } - Local Sim for Demo
-let folders = JSON.parse(localStorage.getItem('verix_folders') || '[]');
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- INIT ---
-window.onload = async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  document.getElementById('loader').style.opacity = '0';
-  setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
-  
-  if (session) {
-    initApp(session.user);
-  }
-};
+        // STATE
+        let notes = [], currentNote = null, currentFilter = 'All', drivePath = '/';
+        let lockedNotes = JSON.parse(localStorage.getItem('vault_locks') || '{}');
 
-// --- AUTH ---
-async function login() {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('pass').value;
-  const btn = document.querySelector('.btn-primary');
-  const err = document.getElementById('auth-error');
-  
-  btn.innerText = "Verifying...";
-  err.innerText = "";
-  
-  try {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    initApp(data.user);
-  } catch(e) {
-    err.innerText = e.message;
-    btn.innerText = "Unlock Vault";
-  }
-}
+        // --- AUTH ---
+        async function login() {
+            const btn = document.querySelector('button[onclick="login()"]');
+            btn.innerText = "Authenticating...";
+            const { data, error } = await sb.auth.signInWithPassword({
+                email: document.getElementById('email').value,
+                password: document.getElementById('pass').value
+            });
+            if (error) {
+                document.getElementById('auth-error').innerText = error.message;
+                btn.innerText = "Enter Vault";
+            } else {
+                init(data.user);
+            }
+        }
 
-async function logout() {
-  await sb.auth.signOut();
-  window.location.reload();
-}
+        async function init(user) {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            document.getElementById('user-email').innerText = user.email;
+            fetchNotes();
+        }
 
-function initApp(user) {
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('u-email').innerText = user.email;
-  document.getElementById('u-av').innerText = user.email[0].toUpperCase();
-  
-  refreshDrive();
-  refreshNotes();
-}
+        async function logout() { await sb.auth.signOut(); location.reload(); }
 
-// --- NAVIGATION ---
-function switchView(view) {
-  document.getElementById('nav-drive').classList.remove('active');
-  document.getElementById('nav-notes').classList.remove('active');
-  document.getElementById('nav-' + view).classList.add('active');
-  
-  document.getElementById('view-drive').classList.add('hidden');
-  document.getElementById('view-notes').classList.add('hidden');
-  document.getElementById('view-' + view).classList.remove('hidden');
-  
-  if (view === 'notes' && !activeNote && allNotes.length > 0) {
-    selectNote(allNotes[0].id);
-  }
-}
+        async function changePassword() {
+            const pass = document.getElementById('new-pass').value;
+            if(!pass) return toast("Enter a password");
+            const { error } = await sb.auth.updateUser({ password: pass });
+            if(error) toast(error.message);
+            else { toast("Password Updated"); document.getElementById('settings-modal').classList.add('hidden'); }
+        }
 
-// --- DRIVE LOGIC ---
-async function refreshDrive() {
-  const path = currentPath === '/' ? '' : currentPath;
-  const { data, error } = await sb.storage.from('files').list(path);
-  
-  const container = document.getElementById('drive-view');
-  container.innerHTML = '';
-  
-  // Breadcrumbs
-  const crumbs = document.getElementById('breadcrumbs');
-  crumbs.innerHTML = currentPath === '/' ? 'Home' : currentPath.split('/').map(p => ` / ${p}`).join('');
-  
-  if (currentPath !== '/') {
-    container.innerHTML += createDriveItem('..', 'folder-up', 'Go Back', () => openPath('..'));
-  }
-  
-  if (data) {
-    data.forEach(file => {
-      if (file.name === '.keep') return;
-      const isFolder = !file.metadata;
-      const icon = isFolder ? 'folder-3-fill' : getFileIcon(file.name);
-      const color = isFolder ? 'var(--primary)' : 'var(--text-muted)';
-      
-      const el = document.createElement('div');
-      el.className = 'file-card';
-      el.innerHTML = `
-        <i class="ri-${icon} file-icon" style="color:${color}"></i>
-        <div class="file-name">${file.name}</div>
-      `;
-      el.onclick = () => isFolder ? openPath(file.name) : previewFile(file.name);
-      el.oncontextmenu = (e) => showContext(e, 'file', file.name);
-      container.appendChild(el);
-    });
-  }
-}
+        // --- NAVIGATION ---
+        function switchApp(app) {
+            document.getElementById('nav-notes').classList.toggle('active', app === 'notes');
+            document.getElementById('nav-drive').classList.toggle('active', app === 'drive');
+            document.getElementById('app-notes').classList.toggle('hidden', app !== 'notes');
+            document.getElementById('app-drive').classList.toggle('hidden', app !== 'drive');
+            document.getElementById('notes-sidebar').classList.toggle('hidden', app !== 'notes');
+            document.getElementById('drive-sidebar').classList.toggle('hidden', app !== 'drive');
+            if (app === 'drive') loadDrive();
+        }
 
-function createDriveItem(name, icon, label, action) {
-  return `<div class="file-card" onclick="(${action})()">
-    <i class="ri-${icon} file-icon" style="color:var(--text-muted)"></i>
-    <div class="file-name">${label || name}</div>
-  </div>`;
-}
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+        }
 
-function getFileIcon(name) {
-  if (name.endsWith('.png') || name.endsWith('.jpg')) return 'image-fill';
-  if (name.endsWith('.pdf')) return 'file-pdf-fill';
-  if (name.endsWith('.zip')) return 'file-zip-fill';
-  return 'file-text-fill';
-}
+        function openSettings() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
 
-function openPath(folder) {
-  if (folder === '..') {
-    const parts = currentPath.split('/');
-    parts.pop();
-    currentPath = parts.length === 0 || (parts.length === 1 && parts[0] === '') ? '/' : parts.join('/');
-  } else {
-    currentPath = currentPath === '/' ? folder : `${currentPath}/${folder}`;
-  }
-  refreshDrive();
-}
+        // --- NOTES SYSTEM ---
+        async function fetchNotes() {
+            const { data } = await sb.from('notes').select('*').order('updated_at', { ascending: false });
+            notes = data || [];
+            renderFolders();
+            renderNotesList();
+        }
 
-async function createFolder() {
-  const name = prompt("Folder Name:");
-  if (name) {
-    const fullPath = currentPath === '/' ? `${name}/.keep` : `${currentPath}/${name}/.keep`;
-    await sb.storage.from('files').upload(fullPath, new Blob(['']));
-    refreshDrive();
-    toast("Folder created");
-  }
-}
+        function renderFolders() {
+            // Get unique folders from notes
+            const folders = [...new Set(notes.map(n => n.folder).filter(f => f && f !== '/' && f !== 'trash'))];
+            const container = document.getElementById('folder-list');
+            
+            let html = `<div onclick="filterNotes('All')" class="sidebar-item ${currentFilter === 'All' ? 'active' : ''}"><i class="ri-inbox-line"></i> All Notes</div>`;
+            
+            folders.forEach(f => {
+                html += `
+                <div class="sidebar-item group ${currentFilter === f ? 'active' : ''}" onclick="filterNotes('${f}')">
+                    <i class="ri-folder-3-line"></i> <span class="flex-1 truncate">${f}</span>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
 
-async function uploadFiles(files) {
-  if (!files.length) return;
-  toast(`Uploading ${files.length} files...`);
-  for (const file of files) {
-    const fullPath = currentPath === '/' ? file.name : `${currentPath}/${file.name}`;
-    await sb.storage.from('files').upload(fullPath, file);
-  }
-  refreshDrive();
-  toast("Upload complete");
-}
+        function filterNotes(folder) {
+            currentFilter = folder;
+            renderFolders();
+            renderNotesList();
+        }
 
-function handleDragOver(e) { e.preventDefault(); document.body.classList.add('drag-active'); }
-function handleDragLeave(e) { e.preventDefault(); document.body.classList.remove('drag-active'); }
-function handleDrop(e) {
-  e.preventDefault();
-  document.body.classList.remove('drag-active');
-  if (document.getElementById('view-drive').classList.contains('hidden')) return;
-  uploadFiles(e.dataTransfer.files);
-}
+        function renderNotesList() {
+            const container = document.getElementById('note-list-container');
+            let filtered = notes;
+            
+            if (currentFilter === 'trash') {
+                filtered = notes.filter(n => n.folder === 'trash');
+            } else if (currentFilter !== 'All') {
+                filtered = notes.filter(n => n.folder === currentFilter);
+            } else {
+                filtered = notes.filter(n => n.folder !== 'trash');
+            }
 
-// --- NOTES LOGIC ---
-async function refreshNotes() {
-  // Try fetching with 'updated_at', if fails, fetch basic
-  let { data, error } = await sb.from('notes').select('*').order('created_at', { ascending: false });
-  
-  if (error) {
-     console.warn("Schema mismatch, trying basic select");
-     // Fallback for schema variance
-     let res = await sb.from('notes').select('*');
-     data = res.data;
-  }
-  
-  allNotes = data || [];
-  renderNoteList(allNotes);
-}
+            // Search filtering
+            const search = document.querySelector('input[placeholder="Search..."]').value.toLowerCase();
+            if (search) filtered = filtered.filter(n => n.title.toLowerCase().includes(search) || n.content.toLowerCase().includes(search));
 
-function renderNoteList(notes) {
-  const container = document.getElementById('notes-list');
-  container.innerHTML = '';
-  
-  notes.forEach(note => {
-    const isLocked = lockedNotes[note.id];
-    const el = document.createElement('div');
-    el.className = `note-item ${activeNote?.id === note.id ? 'active' : ''}`;
-    el.innerHTML = `
-      <div class="note-title">
-        <span>${isLocked ? '<i class="ri-lock-fill"></i> ' : ''}${note.title || 'Untitled'}</span>
-        ${note.is_pinned ? '<i class="ri-pushpin-fill" style="color:var(--primary)"></i>' : ''}
-      </div>
-      <div class="note-preview">${isLocked ? '••••••••' : (note.content?.substring(0, 50) || 'No content')}</div>
-      <div class="note-meta">
-        <span>${new Date(note.created_at).toLocaleDateString()}</span>
-      </div>
-    `;
-    el.onclick = () => selectNote(note.id);
-    el.oncontextmenu = (e) => showContext(e, 'note', note.id);
-    container.appendChild(el);
-  });
-}
+            container.innerHTML = filtered.map(n => {
+                const isLocked = lockedNotes[n.id];
+                const preview = isLocked ? '••••••••' : (n.content?.slice(0, 60) || 'No content');
+                return `
+                <div onclick="openNote('${n.id}')" class="note-card ${currentNote?.id === n.id ? 'active' : ''}">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-semibold text-text truncate ${isLocked ? 'text-accent' : ''}">
+                            ${isLocked ? '<i class="ri-lock-fill"></i> ' : ''} ${n.title || 'Untitled'}
+                        </span>
+                        ${n.is_pinned ? '<i class="ri-pushpin-fill text-accent text-xs"></i>' : ''}
+                    </div>
+                    <div class="text-xs text-muted line-clamp-2">${preview}</div>
+                    <div class="mt-2 text-[10px] text-muted font-mono">${new Date(n.updated_at || n.created_at).toLocaleDateString()}</div>
+                </div>`;
+            }).join('');
+        }
 
-function selectNote(id) {
-  activeNote = allNotes.find(n => n.id === id);
-  renderNoteList(allNotes); // Update active class
-  
-  // Check Lock
-  if (lockedNotes[id]) {
-    document.getElementById('locked-overlay').classList.remove('hidden');
-    document.getElementById('unlock-pass').value = '';
-    return;
-  }
-  
-  document.getElementById('locked-overlay').classList.add('hidden');
-  document.getElementById('note-title-input').value = activeNote.title || '';
-  document.getElementById('note-content').value = activeNote.content || '';
-  
-  updateStats();
-  updateLockIcon();
-}
+        async function createNote() {
+            let folder = currentFilter === 'All' || currentFilter === 'trash' ? '/' : currentFilter;
+            const { data } = await sb.from('notes').insert([{ title: 'Untitled', content: '', folder }]).select();
+            if (data) {
+                notes.unshift(data[0]);
+                openNote(data[0].id);
+                renderNotesList();
+            }
+        }
 
-async function createNote() {
-  const newNote = { title: 'Untitled', content: '' };
-  // Fallback insert
-  const { data } = await sb.from('notes').insert([newNote]).select();
-  if (data) {
-    allNotes.unshift(data[0]);
-    selectNote(data[0].id);
-    refreshNotes();
-  }
-}
+        function openNote(id) {
+            currentNote = notes.find(n => n.id === id);
+            renderNotesList(); // update active state
+            
+            document.getElementById('editor-empty').classList.add('hidden');
+            document.getElementById('editor-main').classList.remove('hidden');
+            document.getElementById('editor-main').classList.add('flex');
+            
+            // Check Lock
+            if (lockedNotes[id]) {
+                document.getElementById('lock-screen').classList.remove('hidden');
+                document.getElementById('unlock-pass').value = '';
+                return;
+            } else {
+                document.getElementById('lock-screen').classList.add('hidden');
+            }
 
-function handleInput(textarea) {
-  const val = textarea.value;
-  
-  // Stealth AI Trigger
-  if (val.endsWith('aistart')) {
-    const cleanVal = val.replace('aistart', '');
-    textarea.value = cleanVal;
-    triggerStealthAI(cleanVal);
-    return;
-  }
-  
-  triggerSave();
-}
+            loadEditorData();
+        }
 
-function triggerSave() {
-  document.getElementById('save-indicator').innerText = 'Saving...';
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNote, 1000);
-  updateStats();
-}
+        function loadEditorData() {
+            document.getElementById('note-title').value = currentNote.title || '';
+            document.getElementById('note-content').value = currentNote.content || '';
+            document.getElementById('note-folder-badge').innerText = currentNote.folder === '/' ? 'Inbox' : currentNote.folder;
+            
+            // Icons state
+            const lockBtn = document.getElementById('btn-lock');
+            lockBtn.innerHTML = lockedNotes[currentNote.id] ? '<i class="ri-lock-fill text-accent"></i>' : '<i class="ri-lock-unlock-line"></i>';
+            
+            updateWordCount();
+        }
 
-async function saveNote() {
-  if (!activeNote) return;
-  const title = document.getElementById('note-title-input').value;
-  const content = document.getElementById('note-content').value;
-  
-  await sb.from('notes').update({ title, content }).eq('id', activeNote.id);
-  document.getElementById('save-indicator').innerText = 'Saved';
-  
-  activeNote.title = title;
-  activeNote.content = content;
-  refreshNotes(); // Update sidebar list
-}
+        // --- EDITOR ACTIONS ---
+        let saveTimeout;
+        function handleInput(el) {
+            updateWordCount();
+            
+            // Stealth AI Trigger
+            const val = el.value;
+            if (val.endsWith('aistart')) {
+                el.value = val.slice(0, -7); // Remove command
+                runStealthAI();
+                return;
+            }
+            triggerSave();
+        }
 
-// --- FEATURES ---
-function toggleFocusMode() {
-  const sidebar = document.querySelector('.notes-list-col');
-  const nav = document.getElementById('sidebar');
-  if (sidebar.style.display === 'none') {
-    sidebar.style.display = 'flex';
-    nav.style.display = 'flex';
-  } else {
-    sidebar.style.display = 'none';
-    nav.style.display = 'none';
-  }
-}
+        function triggerSave() {
+            document.getElementById('save-status').innerText = "Saving...";
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(saveNote, 1000);
+        }
 
-function updateStats() {
-  const text = document.getElementById('note-content').value;
-  const words = text.trim().split(/\s+/).length;
-  const time = Math.ceil(words / 200);
-  document.getElementById('editor-stats').innerText = `${words} words · ${time} min read`;
-}
+        async function saveNote() {
+            if (!currentNote) return;
+            const title = document.getElementById('note-title').value;
+            const content = document.getElementById('note-content').value;
+            
+            await sb.from('notes').update({ title, content, updated_at: new Date() }).eq('id', currentNote.id);
+            document.getElementById('save-status').innerText = "Saved";
+            
+            // Update local state
+            currentNote.title = title;
+            currentNote.content = content;
+            renderNotesList();
+        }
 
-function toggleLock() {
-  if (!activeNote) return;
-  if (lockedNotes[activeNote.id]) {
-    // Unlock
-    delete lockedNotes[activeNote.id];
-    toast('Note Unlocked');
-  } else {
-    // Lock
-    const pass = prompt("Set a password for this note:");
-    if (pass) {
-      lockedNotes[activeNote.id] = pass;
-      toast('Note Locked');
-    }
-  }
-  localStorage.setItem('verix_locks', JSON.stringify(lockedNotes));
-  updateLockIcon();
-  refreshNotes();
-}
+        async function deleteNote() {
+            if (currentNote.folder === 'trash') {
+                if(!confirm("Permanently delete?")) return;
+                await sb.from('notes').delete().eq('id', currentNote.id);
+                notes = notes.filter(n => n.id !== currentNote.id);
+            } else {
+                await sb.from('notes').update({ folder: 'trash' }).eq('id', currentNote.id);
+                currentNote.folder = 'trash';
+                toast("Moved to Trash");
+            }
+            currentNote = null;
+            document.getElementById('editor-main').classList.add('hidden');
+            document.getElementById('editor-empty').classList.remove('hidden');
+            fetchNotes();
+        }
 
-function updateLockIcon() {
-  const btn = document.getElementById('btn-lock');
-  if (activeNote && lockedNotes[activeNote.id]) {
-    btn.style.color = 'var(--primary)';
-    btn.innerHTML = '<i class="ri-lock-fill"></i>';
-  } else {
-    btn.style.color = 'var(--text-muted)';
-    btn.innerHTML = '<i class="ri-lock-unlock-line"></i>';
-  }
-}
+        function toggleLockNote() {
+            if (lockedNotes[currentNote.id]) {
+                delete lockedNotes[currentNote.id];
+                toast("Note Unlocked");
+            } else {
+                const pass = prompt("Set password for this note:");
+                if (pass) {
+                    lockedNotes[currentNote.id] = pass;
+                    toast("Note Locked");
+                }
+            }
+            localStorage.setItem('vault_locks', JSON.stringify(lockedNotes));
+            openNote(currentNote.id); // Refresh view
+        }
 
-function unlockNote() {
-  const pass = document.getElementById('unlock-pass').value;
-  if (pass === lockedNotes[activeNote.id]) {
-    document.getElementById('locked-overlay').classList.add('hidden');
-    document.getElementById('note-title-input').value = activeNote.title;
-    document.getElementById('note-content').value = activeNote.content;
-  } else {
-    toast("Incorrect Password");
-  }
-}
+        function unlockNote() {
+            const input = document.getElementById('unlock-pass').value;
+            if (input === lockedNotes[currentNote.id]) {
+                document.getElementById('lock-screen').classList.add('hidden');
+                loadEditorData();
+            } else {
+                toast("Incorrect Password");
+            }
+        }
 
-function insertMD(char) {
-  const ta = document.getElementById('note-content');
-  const start = ta.selectionStart;
-  const end = ta.selectionEnd;
-  const text = ta.value;
-  const before = text.substring(0, start);
-  const after = text.substring(end, text.length);
-  const select = text.substring(start, end);
-  
-  ta.value = before + char + select + char + after;
-  triggerSave();
-}
+        async function createFolder() {
+            const name = prompt("Folder Name:");
+            if(!name) return;
+            // We create a dummy note to establish the folder
+            const { data } = await sb.from('notes').insert([{ title: 'Welcome to ' + name, content: '', folder: name }]).select();
+            if(data) {
+                notes.unshift(data[0]);
+                renderFolders();
+                filterNotes(name);
+            }
+        }
 
-// --- STEALTH AI & GRAMMAR ---
-async function triggerStealthAI(currentText) {
-  toast("Stealth AI Activated ✨");
-  // Simulating AI Humanizer (Replace with API call if you have a backend proxy)
-  // Since this is client-side only, we simulate a premium response
-  const loader = document.getElementById('loader');
-  loader.style.display = 'flex';
-  loader.style.opacity = '1';
-  
-  setTimeout(() => {
-    loader.style.opacity = '0';
-    setTimeout(() => loader.style.display = 'none', 500);
-    
-    // Simulate improvement
-    const improved = currentText + "\n\n[AI Refined]: The ideas here are solid, but I've polished the flow for better readability.";
-    document.getElementById('note-content').value = improved;
-    triggerSave();
-    toast("Text Humanized");
-  }, 1500);
-}
+        // --- DRIVE SYSTEM ---
+        async function loadDrive(path = '/') {
+            drivePath = path;
+            const { data } = await sb.storage.from('files').list(path === '/' ? '' : path);
+            const container = document.getElementById('drive-grid');
+            
+            // Breadcrumbs
+            const crumbs = path === '/' ? '' : path.split('/').map(p => ` / ${p}`).join('');
+            document.getElementById('breadcrumbs').innerText = crumbs;
 
-function openGrammarCheck() {
-  toast("Scanning for grammar issues...");
-  setTimeout(() => toast("No critical errors found. Good writing!"), 2000);
-}
+            let html = '';
+            if (path !== '/') html += `<div onclick="loadDrive('/')" class="p-4 rounded-xl bg-surface border border-border flex flex-col items-center justify-center cursor-pointer hover:bg-border"><i class="ri-arrow-go-back-line text-xl mb-2 text-muted"></i><span class="text-xs">Back</span></div>`;
 
-// --- CONTEXT MENU ---
-function showContext(e, type, id) {
-  e.preventDefault();
-  const menu = document.getElementById('ctx-menu');
-  menu.style.display = 'block';
-  menu.style.left = e.pageX + 'px';
-  menu.style.top = e.pageY + 'px';
-  menu.classList.remove('hidden');
-  
-  let html = '';
-  if (type === 'note') {
-    html += `<div class="ctx-item" onclick="togglePinNote('${id}')"><i class="ri-pushpin-line"></i> Pin/Unpin</div>`;
-    html += `<div class="ctx-item delete" onclick="deleteNote('${id}')"><i class="ri-delete-bin-line"></i> Delete</div>`;
-  } else {
-    html += `<div class="ctx-item" onclick="renameFile('${id}')"><i class="ri-edit-line"></i> Rename</div>`;
-    html += `<div class="ctx-item delete" onclick="deleteFile('${id}')"><i class="ri-delete-bin-line"></i> Delete</div>`;
-  }
-  menu.innerHTML = html;
-  
-  document.addEventListener('click', () => menu.classList.add('hidden'), { once: true });
-}
+            data?.forEach(f => {
+                if(f.name === '.keep') return;
+                const isFolder = !f.metadata;
+                html += `
+                <div class="group relative p-4 rounded-xl bg-surface border border-border flex flex-col items-center cursor-pointer hover:border-accent transition-colors" onclick="${isFolder ? `loadDrive('${f.name}')` : `window.open('https://psukzzuhpprfoanvjat.supabase.co/storage/v1/object/public/files/${path === '/' ? '' : path + '/'}${f.name}')`}">
+                    <i class="${isFolder ? 'ri-folder-3-fill text-yellow-500' : 'ri-file-text-fill text-blue-400'} text-4xl mb-3"></i>
+                    <span class="text-xs text-center w-full truncate">${f.name}</span>
+                    <button onclick="event.stopPropagation(); deleteFile('${f.name}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:bg-red-500/10 rounded"><i class="ri-delete-bin-line"></i></button>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
 
-async function deleteNote(id) {
-  if(!confirm("Delete this note?")) return;
-  await sb.from('notes').delete().eq('id', id);
-  refreshNotes();
-  toast("Note moved to trash");
-}
+        async function createDriveFolder() {
+            const name = prompt("Folder Name:");
+            if(!name) return;
+            await sb.storage.from('files').upload(`${drivePath === '/' ? '' : drivePath + '/'}${name}/.keep`, new Blob(['']));
+            loadDrive(drivePath);
+        }
 
-async function deleteFile(name) {
-  if(!confirm("Delete file?")) return;
-  const path = currentPath === '/' ? name : `${currentPath}/${name}`;
-  await sb.storage.from('files').remove([path]);
-  refreshDrive();
-}
+        async function uploadFiles(input) {
+            const file = input.files[0];
+            if(!file) return;
+            toast("Uploading...");
+            await sb.storage.from('files').upload(`${drivePath === '/' ? '' : drivePath + '/'}${file.name}`, file);
+            loadDrive(drivePath);
+            toast("Upload Complete");
+        }
 
-function toast(msg) {
-  const el = document.getElementById('toast');
-  document.getElementById('toast-msg').innerText = msg;
-  el.classList.add('active');
-  setTimeout(() => el.classList.remove('active'), 3000);
-}
+        async function deleteFile(name) {
+            if(!confirm("Delete?")) return;
+            await sb.storage.from('files').remove([`${drivePath === '/' ? '' : drivePath + '/'}${name}`]);
+            loadDrive(drivePath);
+        }
 
-</script>
+        // --- STEALTH AI ---
+        async function runStealthAI() {
+            toast("✨ Optimizing...");
+            const text = document.getElementById('note-content').value;
+            try {
+                const res = await fetch('https://api.undetectable.ai/api/v2/humanize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'api-key': UNDETECTABLE_KEY },
+                    body: JSON.stringify({ content: text, readability: 'High School', purpose: 'General Writing' })
+                });
+                const data = await res.json();
+                if(data.output) {
+                    document.getElementById('note-content').value = data.output;
+                    triggerSave();
+                    toast("Refined successfully");
+                }
+            } catch(e) { toast("AI Error"); }
+        }
+
+        // --- UTILS ---
+        function updateWordCount() {
+            const txt = document.getElementById('note-content').value;
+            const count = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+            document.getElementById('word-count').innerText = `${count} words`;
+        }
+
+        function toast(msg) {
+            const el = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            el.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => el.classList.add('translate-y-20', 'opacity-0'), 3000);
+        }
+        
+        function searchNotes(q) {
+            renderNotesList(); // The search logic is inside renderNotesList
+        }
+
+        // Check Auth on Load
+        sb.auth.getSession().then(({ data: { session } }) => { if (session) init(session.user); });
+    </script>
 </body>
 </html>
