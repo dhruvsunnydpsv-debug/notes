@@ -1,761 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verix Vault | Premium</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<style>
-:root {
-  --bg: #050505;
-  --surface: #0f1012;
-  --surface-hover: #18191d;
-  --border: #222326;
-  --primary: #3b82f6; /* Premium Blue */
-  --primary-glow: rgba(59, 130, 246, 0.2);
-  --text-main: #ededed;
-  --text-muted: #888;
-  --danger: #ef4444;
-  --success: #10b981;
-  --font-main: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --font-serif: 'Playfair Display', serif;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-font-smoothing: antialiased; }
-body { background-color: var(--bg); color: var(--text-main); font-family: var(--font-main); height: 100vh; overflow: hidden; display: flex; }
-
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #444; }
-
-/* UTILS */
-.hidden { display: none !important; }
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-2 { gap: 0.5rem; }
-.glass { background: rgba(20, 20, 23, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
-
-/* --- LOGIN SCREEN --- */
-#auth-screen {
-  position: fixed; inset: 0; z-index: 1000; background: #000;
-  display: flex; align-items: center; justify-content: center;
-  background-image: radial-gradient(circle at 50% 0%, #1e2536 0%, #000 70%);
-}
-.auth-box {
-  width: 420px; padding: 40px; border-radius: 24px;
-  background: rgba(15, 16, 18, 0.6); border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5); backdrop-filter: blur(20px);
-  text-align: center; animation: fadeIn 0.8s ease-out;
-}
-.auth-logo { font-family: var(--font-serif); font-size: 2.5rem; background: linear-gradient(to right, #fff, #888); -webkit-background-clip: text; color: transparent; margin-bottom: 5px; }
-.auth-credit { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 30px; letter-spacing: 1px; text-transform: uppercase; }
-.input-group { position: relative; margin-bottom: 15px; }
-.input-field {
-  width: 100%; background: #0a0a0a; border: 1px solid var(--border);
-  padding: 14px 16px; border-radius: 12px; color: #fff; font-size: 0.95rem;
-  transition: 0.3s;
-}
-.input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-glow); }
-.btn-primary {
-  width: 100%; padding: 14px; background: var(--primary); color: #fff;
-  border: none; border-radius: 12px; font-weight: 600; cursor: pointer;
-  margin-top: 10px; transition: 0.2s; font-size: 1rem;
-}
-.btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
-
-/* --- APP LAYOUT --- */
-#app { width: 100%; height: 100%; display: none; }
-
-/* SIDEBAR */
-#sidebar {
-  width: 260px; background: var(--surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; padding: 20px 12px; transition: 0.3s;
-}
-.brand { font-family: var(--font-serif); font-size: 1.5rem; padding: 0 12px 20px; color: #fff; letter-spacing: -0.5px; }
-.nav-item {
-  display: flex; align-items: center; gap: 12px; padding: 12px;
-  color: var(--text-muted); border-radius: 10px; cursor: pointer;
-  font-size: 0.9rem; font-weight: 500; transition: 0.2s; margin-bottom: 4px;
-}
-.nav-item:hover { background: var(--surface-hover); color: #fff; }
-.nav-item.active { background: rgba(59, 130, 246, 0.1); color: var(--primary); }
-.nav-item i { font-size: 1.1rem; }
-.user-profile {
-  margin-top: auto; padding: 12px; background: var(--bg); border: 1px solid var(--border);
-  border-radius: 12px; display: flex; align-items: center; gap: 10px;
-}
-.avatar { width: 32px; height: 32px; background: linear-gradient(45deg, var(--primary), #8b5cf6); border-radius: 50%; display: grid; place-items: center; font-weight: bold; font-size: 0.8rem; }
-.user-info { display: flex; flex-direction: column; overflow: hidden; }
-.user-email { font-size: 0.75rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; }
-.logout-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.2rem; margin-left: auto; }
-
-/* MAIN CONTENT */
-#main { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
-
-/* TOOLBAR */
-.top-bar {
-  height: 60px; border-bottom: 1px solid var(--border); display: flex;
-  align-items: center; justify-content: space-between; padding: 0 24px;
-  background: rgba(5, 5, 5, 0.8); backdrop-filter: blur(10px);
-}
-.breadcrumb { font-size: 0.9rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
-.breadcrumb span { color: #fff; }
-.action-btn {
-  width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center;
-  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
-  cursor: pointer; transition: 0.2s;
-}
-.action-btn:hover { color: #fff; border-color: #444; }
-
-/* FILE GRID (DRIVE) */
-#drive-view { padding: 24px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; align-content: start; }
-.file-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-  padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px;
-  cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;
-}
-.file-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
-.file-icon { font-size: 2.5rem; }
-.file-name { font-size: 0.8rem; color: var(--text-muted); text-align: center; word-break: break-all; }
-.drag-overlay {
-  position: absolute; inset: 0; background: rgba(59, 130, 246, 0.9); z-index: 500;
-  display: flex; align-items: center; justify-content: center; color: white;
-  font-size: 1.5rem; font-weight: bold; opacity: 0; pointer-events: none; transition: 0.3s;
-}
-.drag-active .drag-overlay { opacity: 1; pointer-events: all; }
-
-/* NOTES LAYOUT */
-#notes-view { display: flex; height: 100%; }
-.notes-list-col {
-  width: 300px; background: var(--surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-}
-.notes-header { padding: 20px; border-bottom: 1px solid var(--border); }
-.notes-search {
-  width: 100%; background: var(--bg); border: 1px solid var(--border);
-  padding: 10px 12px; border-radius: 8px; color: #fff; font-family: var(--font-main);
-  margin-top: 10px;
-}
-.note-item {
-  padding: 16px 20px; border-bottom: 1px solid var(--border); cursor: pointer;
-  transition: 0.2s; position: relative;
-}
-.note-item:hover { background: var(--surface-hover); }
-.note-item.active { background: #15161a; border-left: 3px solid var(--primary); }
-.note-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; display: flex; justify-content: space-between; }
-.note-preview { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.note-meta { font-size: 0.7rem; color: #555; margin-top: 6px; display: flex; justify-content: space-between; }
-
-/* EDITOR */
-.editor-col { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
-.editor-toolbar {
-  padding: 10px 24px; border-bottom: 1px solid var(--border); display: flex;
-  gap: 8px; align-items: center; background: rgba(5,5,5,0.9);
-}
-.tool-btn {
-  background: none; border: none; color: var(--text-muted); cursor: pointer;
-  padding: 6px; border-radius: 4px; transition: 0.2s;
-}
-.tool-btn:hover { color: #fff; background: var(--surface); }
-.editor-meta { margin-left: auto; font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); }
-#note-title-input {
-  background: none; border: none; color: #fff; font-size: 2rem; font-weight: 700;
-  padding: 30px 40px 10px; font-family: var(--font-serif); width: 100%;
-}
-#note-content {
-  flex: 1; background: none; border: none; color: var(--text-main); font-size: 1.05rem;
-  line-height: 1.8; padding: 0 40px 40px; resize: none; font-family: 'Inter', sans-serif;
-}
-#note-content::placeholder { color: #333; }
-
-/* LOCKED NOTE STATE */
-.locked-overlay {
-  position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column;
-  align-items: center; justify-content: center; z-index: 10;
-}
-
-/* CONTEXT MENU */
-.ctx-menu {
-  position: fixed; background: #1a1b1e; border: 1px solid var(--border); border-radius: 8px;
-  width: 180px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 2000; padding: 6px;
-  animation: fadeIn 0.1s ease;
-}
-.ctx-item {
-  padding: 8px 12px; font-size: 0.85rem; color: #ccc; cursor: pointer; border-radius: 4px; display: flex; gap: 8px; align-items: center;
-}
-.ctx-item:hover { background: var(--primary); color: #fff; }
-.ctx-item.delete:hover { background: var(--danger); }
-.ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
-
-/* MODALS */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
-  z-index: 3000; display: flex; align-items: center; justify-content: center;
-}
-.modal {
-  width: 400px; background: #111; border: 1px solid var(--border); border-radius: 16px;
-  padding: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.modal h3 { margin-bottom: 16px; font-weight: 600; color: #fff; }
-.modal input, .modal select {
-  width: 100%; background: #000; border: 1px solid var(--border); padding: 12px;
-  border-radius: 8px; color: #fff; margin-bottom: 16px;
-}
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.btn-ghost { background: transparent; border: 1px solid var(--border); color: #ccc; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
-.btn-accent { background: var(--primary); border: none; color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
-
-/* LOADING & TOAST */
-#loader { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; transition: opacity 0.5s; }
-.spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s infinite linear; }
-#toast {
-  position: fixed; bottom: 30px; right: 30px; background: #1a1b1e; border: 1px solid var(--border);
-  padding: 12px 20px; border-radius: 10px; color: #fff; display: flex; align-items: center; gap: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: translateY(100px); opacity: 0; transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 5000;
-}
-#toast.active { transform: translateY(0); opacity: 1; }
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Vault | Secure Notes & Drive</title>
+  <meta name="description" content="Your personal secure vault for notes and file storage by Dhruv Shah">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
 
-<div id="loader">
-  <div class="spinner"></div>
-  <div style="font-family: var(--font-mono); font-size: 0.8rem; color: #666; letter-spacing: 2px;">VERIX VAULT</div>
-</div>
-
-<div id="toast"><i class="ri-information-line" style="color:var(--primary)"></i> <span id="toast-msg">Notification</span></div>
-
-<div id="auth-screen">
-  <div class="auth-box">
-    <div class="auth-logo">Verix</div>
-    <div class="auth-credit">Created by Dhruv Shah</div>
-    <div class="input-group">
-      <input type="email" id="email" class="input-field" placeholder="Email Address">
-    </div>
-    <div class="input-group">
-      <input type="password" id="pass" class="input-field" placeholder="Password" onkeydown="if(event.key==='Enter') login()">
-    </div>
-    <button class="btn-primary" onclick="login()">Unlock Vault</button>
-    <p id="auth-error" style="color: var(--danger); margin-top: 15px; font-size: 0.8rem; height: 1rem;"></p>
+  <div id="loader">
+    <div class="spinner"></div>
+    <div style="font-family:var(--mono);font-size:.7rem;color:var(--text3);letter-spacing:2px">PERSONAL VAULT</div>
   </div>
-</div>
 
-<div id="app">
-  <nav id="sidebar">
-    <div class="brand">Verix.</div>
-    <div class="nav-item active" id="nav-drive" onclick="switchView('drive')"><i class="ri-hard-drive-2-line"></i> Drive</div>
-    <div class="nav-item" id="nav-notes" onclick="switchView('notes')"><i class="ri-sticky-note-line"></i> Notes</div>
-    <div class="nav-item" onclick="openGrammarCheck()"><i class="ri-text"></i> Grammar</div>
-    
-    <div class="user-profile">
-      <div class="avatar" id="u-av">U</div>
-      <div class="user-info">
-        <div class="user-email" id="u-email">user@verix.com</div>
-      </div>
-      <button class="logout-btn" onclick="logout()"><i class="ri-logout-box-line"></i></button>
+  <div id="toast"><i id="toast-icon" class="ri-information-line"></i><span id="toast-msg"></span></div>
+
+  <!-- AUTH -->
+  <div id="auth-screen">
+    <div class="auth-box">
+      <div class="auth-logo">Personal Vault</div>
+      <div class="auth-sub">by Dhruv Shah</div>
+      <div class="input-wrap"><input type="email" id="email" class="input-field" placeholder="Email"></div>
+      <div class="input-wrap"><input type="password" id="pass" class="input-field" placeholder="Password"
+          onkeydown="if(event.key==='Enter')login()"></div>
+      <button id="login-btn" class="btn-primary" onclick="login()">Sign In</button>
+      <p id="auth-err" class="auth-err"></p>
     </div>
-  </nav>
+  </div>
 
-  <main id="main">
-    
-    <div id="view-drive" style="display:flex; flex-direction:column; height:100%;">
-      <div class="top-bar">
-        <div class="breadcrumb">
-          <i class="ri-home-4-fill" style="cursor:pointer" onclick="openPath('/')"></i>
-          <span id="breadcrumbs"></span>
-        </div>
-        <div style="display:flex; gap:10px;">
-          <div class="action-btn" onclick="createFolder()" title="New Folder"><i class="ri-folder-add-line"></i></div>
-          <div class="action-btn" onclick="document.getElementById('file-upload').click()" title="Upload"><i class="ri-upload-cloud-2-line"></i></div>
-          <input type="file" id="file-upload" hidden multiple onchange="uploadFiles(this.files)">
-        </div>
-      </div>
-      <div id="drive-view"></div>
-      <div class="drag-overlay" id="drag-overlay">Drop files to upload</div>
-    </div>
+  <!-- APP -->
+  <div id="app">
+    <nav id="sidebar">
+      <div class="sb-brand"><i class="ri-shield-keyhole-fill" style="color:var(--primary)"></i><span>Vault</span></div>
+      <div class="sb-section">Main</div>
+      <div class="nav-item active" data-view="drive" onclick="switchView('drive')"><i
+          class="ri-hard-drive-2-line"></i>Drive</div>
+      <div class="nav-item" data-view="notes" onclick="switchView('notes')"><i class="ri-file-text-line"></i>Notes</div>
+      <div class="sb-section">System</div>
+      <div class="nav-item" onclick="openGrammar()"><i class="ri-text"></i>Grammar Check</div>
+      <div class="nav-item" data-view="trash" onclick="switchView('trash')"><i class="ri-delete-bin-line"></i>Trash<span
+          class="badge hidden" id="trash-badge">0</span></div>
 
-    <div id="view-notes" class="hidden">
-      <div class="notes-list-col">
-        <div class="notes-header">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="font-weight:600">Library</h3>
-            <div class="action-btn" onclick="createNote()"><i class="ri-add-line"></i></div>
+      <div class="sb-bottom">
+        <div class="theme-toggle" onclick="toggleTheme()"><i id="theme-icon" class="ri-moon-line"></i><span
+            id="theme-label">Dark Mode</span></div>
+        <div class="user-card">
+          <div class="avatar" id="u-avatar">U</div>
+          <div style="overflow:hidden">
+            <div class="user-email" id="u-email">user</div>
           </div>
-          <input type="text" class="notes-search" placeholder="Search..." oninput="filterNotes(this.value)">
+          <button class="logout-btn" onclick="logout()" title="Sign out"><i class="ri-logout-box-r-line"></i></button>
         </div>
-        <div id="notes-list" style="overflow-y:auto; flex:1;"></div>
       </div>
-      
-      <div class="editor-col">
-        <div id="locked-overlay" class="locked-overlay hidden">
-          <i class="ri-lock-2-fill" style="font-size:3rem; color:var(--text-muted); margin-bottom:1rem;"></i>
-          <h2 style="margin-bottom:1rem;">Protected Note</h2>
-          <input type="password" id="unlock-pass" placeholder="Enter Password" class="input-field" style="width:200px; text-align:center;">
-          <button class="btn-primary" style="width:200px; margin-top:10px;" onclick="unlockNote()">Unlock</button>
-        </div>
+    </nav>
 
-        <div class="editor-toolbar">
-          <button class="tool-btn" onclick="insertMD('**')"><i class="ri-bold"></i></button>
-          <button class="tool-btn" onclick="insertMD('*')"><i class="ri-italic"></i></button>
-          <button class="tool-btn" onclick="insertMD('`')"><i class="ri-code-s-slash-line"></i></button>
-          <button class="tool-btn" onclick="toggleFocusMode()"><i class="ri-fullscreen-line"></i></button>
-          <div style="width:1px; height:20px; background:var(--border); margin:0 8px;"></div>
-          <button class="tool-btn" onclick="toggleLock()" id="btn-lock"><i class="ri-lock-unlock-line"></i></button>
-          <span class="editor-meta" id="editor-stats">0 words</span>
-          <span class="editor-meta" id="save-indicator" style="margin-left:10px; color:var(--primary);">Saved</span>
+    <main id="main">
+      <!-- DRIVE -->
+      <div id="view-drive" style="display:flex;flex-direction:column;height:100%">
+        <div class="topbar">
+          <div class="topbar-left">
+            <i class="ri-home-4-fill" onclick="currentPath='/';refreshDrive()"></i>
+            <span>/</span><span class="crumb" id="crumb-text">Home</span>
+          </div>
+          <div class="topbar-right">
+            <div class="view-toggle">
+              <button class="active" onclick="setViewMode('grid')"><i class="ri-grid-fill"></i></button>
+              <button onclick="setViewMode('list')"><i class="ri-list-unordered"></i></button>
+            </div>
+            <select class="sort-select" onchange="setSortBy(this.value)">
+              <option value="name">Name</option>
+              <option value="date">Date</option>
+            </select>
+            <div class="icon-btn" onclick="createFolder()" title="New Folder"><i class="ri-folder-add-line"></i></div>
+            <div class="icon-btn" onclick="document.getElementById('file-up').click()" title="Upload"><i
+                class="ri-upload-cloud-2-line"></i></div>
+            <input type="file" id="file-up" hidden multiple onchange="uploadFiles(this.files)">
+          </div>
         </div>
-        <input id="note-title-input" placeholder="Untitled" oninput="triggerSave()">
-        <textarea id="note-content" placeholder="Start typing... (Tip: Type 'aistart' for AI)" oninput="handleInput(this)"></textarea>
+        <div class="drive-area">
+          <div id="drive-grid" class="drive-grid"></div>
+          <div class="drop-zone">Drop files to upload</div>
+        </div>
       </div>
-    </div>
 
-  </main>
-</div>
+      <!-- NOTES -->
+      <div id="view-notes" class="hidden">
+        <div class="notes-sidebar">
+          <div class="notes-head">
+            <div class="notes-head-top">
+              <h3>Notes</h3>
+              <div class="icon-btn" onclick="createNote()" title="New Note"><i class="ri-add-line"></i></div>
+            </div>
+            <input type="text" class="notes-search" placeholder="Search notes..." oninput="filterNotes(this.value)">
+          </div>
+          <div id="notes-list"></div>
+        </div>
+        <div class="editor-area">
+          <div id="lock-screen" class="lock-screen hidden">
+            <i class="ri-lock-2-fill"></i>
+            <h2>Protected Note</h2>
+            <input type="password" id="unlock-pw" class="input-field" placeholder="Password"
+              style="width:200px;text-align:center;margin-top:8px">
+            <button class="btn-primary" style="width:200px;margin-top:8px" onclick="unlockNote()">Unlock</button>
+          </div>
+          <div class="editor-bar">
+            <button class="tool-btn" onclick="insertMD('**')" title="Bold"><i class="ri-bold"></i></button>
+            <button class="tool-btn" onclick="insertMD('*')" title="Italic"><i class="ri-italic"></i></button>
+            <button class="tool-btn" onclick="insertMD('`')" title="Code"><i class="ri-code-s-slash-line"></i></button>
+            <button class="tool-btn" onclick="toggleFocus()" title="Focus"><i class="ri-fullscreen-line"></i></button>
+            <div class="tool-sep"></div>
+            <button class="tool-btn" id="btn-lock" onclick="toggleLock()" title="Lock"><i
+                class="ri-lock-unlock-line"></i></button>
+            <div class="editor-info">
+              <span id="word-count">0 words</span>
+              <span id="save-status"><span class="save-dot"></span>Saved</span>
+            </div>
+          </div>
+          <input id="note-title" placeholder="Untitled" oninput="triggerSave()">
+          <textarea id="note-body" placeholder="Start writing..." oninput="handleNoteInput(this)"></textarea>
+        </div>
+      </div>
 
-<div id="ctx-menu" class="ctx-menu hidden"></div>
-
-<div id="modal-overlay" class="modal-overlay hidden">
-  <div class="modal">
-    <h3 id="modal-title">Title</h3>
-    <div id="modal-content"></div>
-    <div class="modal-actions">
-      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn-accent" id="modal-confirm-btn">Confirm</button>
-    </div>
+      <!-- TRASH -->
+      <div id="view-trash" class="hidden" style="display:flex;flex-direction:column;height:100%">
+        <div class="topbar">
+          <div class="topbar-left"><i class="ri-delete-bin-line"></i><span class="crumb">Trash</span></div>
+          <div class="topbar-right">
+            <div class="icon-btn" onclick="emptyTrash()" title="Empty Trash"><i class="ri-delete-bin-fill"
+                style="color:var(--danger)"></i></div>
+          </div>
+        </div>
+        <div class="trash-list" id="trash-content"></div>
+      </div>
+    </main>
   </div>
-</div>
 
-<script>
-// --- CONFIGURATION ---
-const SUPABASE_URL = 'https://psukmzzuhpprfoanvjat.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304';
-
-let sb;
-try {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true }
-  });
-} catch(e) { console.error("Init Error", e); }
-
-// --- STATE ---
-let currentPath = '/';
-let allNotes = [];
-let activeNote = null;
-let saveTimer = null;
-let lockedNotes = JSON.parse(localStorage.getItem('verix_locks') || '{}'); // { noteId: 'password' } - Local Sim for Demo
-let folders = JSON.parse(localStorage.getItem('verix_folders') || '[]');
-
-// --- INIT ---
-window.onload = async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  document.getElementById('loader').style.opacity = '0';
-  setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
-  
-  if (session) {
-    initApp(session.user);
-  }
-};
-
-// --- AUTH ---
-async function login() {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('pass').value;
-  const btn = document.querySelector('.btn-primary');
-  const err = document.getElementById('auth-error');
-  
-  btn.innerText = "Verifying...";
-  err.innerText = "";
-  
-  try {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    initApp(data.user);
-  } catch(e) {
-    err.innerText = e.message;
-    btn.innerText = "Unlock Vault";
-  }
-}
-
-async function logout() {
-  await sb.auth.signOut();
-  window.location.reload();
-}
-
-function initApp(user) {
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('u-email').innerText = user.email;
-  document.getElementById('u-av').innerText = user.email[0].toUpperCase();
-  
-  refreshDrive();
-  refreshNotes();
-}
-
-// --- NAVIGATION ---
-function switchView(view) {
-  document.getElementById('nav-drive').classList.remove('active');
-  document.getElementById('nav-notes').classList.remove('active');
-  document.getElementById('nav-' + view).classList.add('active');
-  
-  document.getElementById('view-drive').classList.add('hidden');
-  document.getElementById('view-notes').classList.add('hidden');
-  document.getElementById('view-' + view).classList.remove('hidden');
-  
-  if (view === 'notes' && !activeNote && allNotes.length > 0) {
-    selectNote(allNotes[0].id);
-  }
-}
-
-// --- DRIVE LOGIC ---
-async function refreshDrive() {
-  const path = currentPath === '/' ? '' : currentPath;
-  const { data, error } = await sb.storage.from('files').list(path);
-  
-  const container = document.getElementById('drive-view');
-  container.innerHTML = '';
-  
-  // Breadcrumbs
-  const crumbs = document.getElementById('breadcrumbs');
-  crumbs.innerHTML = currentPath === '/' ? 'Home' : currentPath.split('/').map(p => ` / ${p}`).join('');
-  
-  if (currentPath !== '/') {
-    container.innerHTML += createDriveItem('..', 'folder-up', 'Go Back', () => openPath('..'));
-  }
-  
-  if (data) {
-    data.forEach(file => {
-      if (file.name === '.keep') return;
-      const isFolder = !file.metadata;
-      const icon = isFolder ? 'folder-3-fill' : getFileIcon(file.name);
-      const color = isFolder ? 'var(--primary)' : 'var(--text-muted)';
-      
-      const el = document.createElement('div');
-      el.className = 'file-card';
-      el.innerHTML = `
-        <i class="ri-${icon} file-icon" style="color:${color}"></i>
-        <div class="file-name">${file.name}</div>
-      `;
-      el.onclick = () => isFolder ? openPath(file.name) : previewFile(file.name);
-      el.oncontextmenu = (e) => showContext(e, 'file', file.name);
-      container.appendChild(el);
-    });
-  }
-}
-
-function createDriveItem(name, icon, label, action) {
-  return `<div class="file-card" onclick="(${action})()">
-    <i class="ri-${icon} file-icon" style="color:var(--text-muted)"></i>
-    <div class="file-name">${label || name}</div>
-  </div>`;
-}
-
-function getFileIcon(name) {
-  if (name.endsWith('.png') || name.endsWith('.jpg')) return 'image-fill';
-  if (name.endsWith('.pdf')) return 'file-pdf-fill';
-  if (name.endsWith('.zip')) return 'file-zip-fill';
-  return 'file-text-fill';
-}
-
-function openPath(folder) {
-  if (folder === '..') {
-    const parts = currentPath.split('/');
-    parts.pop();
-    currentPath = parts.length === 0 || (parts.length === 1 && parts[0] === '') ? '/' : parts.join('/');
-  } else {
-    currentPath = currentPath === '/' ? folder : `${currentPath}/${folder}`;
-  }
-  refreshDrive();
-}
-
-async function createFolder() {
-  const name = prompt("Folder Name:");
-  if (name) {
-    const fullPath = currentPath === '/' ? `${name}/.keep` : `${currentPath}/${name}/.keep`;
-    await sb.storage.from('files').upload(fullPath, new Blob(['']));
-    refreshDrive();
-    toast("Folder created");
-  }
-}
-
-async function uploadFiles(files) {
-  if (!files.length) return;
-  toast(`Uploading ${files.length} files...`);
-  for (const file of files) {
-    const fullPath = currentPath === '/' ? file.name : `${currentPath}/${file.name}`;
-    await sb.storage.from('files').upload(fullPath, file);
-  }
-  refreshDrive();
-  toast("Upload complete");
-}
-
-function handleDragOver(e) { e.preventDefault(); document.body.classList.add('drag-active'); }
-function handleDragLeave(e) { e.preventDefault(); document.body.classList.remove('drag-active'); }
-function handleDrop(e) {
-  e.preventDefault();
-  document.body.classList.remove('drag-active');
-  if (document.getElementById('view-drive').classList.contains('hidden')) return;
-  uploadFiles(e.dataTransfer.files);
-}
-
-// --- NOTES LOGIC ---
-async function refreshNotes() {
-  // Try fetching with 'updated_at', if fails, fetch basic
-  let { data, error } = await sb.from('notes').select('*').order('created_at', { ascending: false });
-  
-  if (error) {
-     console.warn("Schema mismatch, trying basic select");
-     // Fallback for schema variance
-     let res = await sb.from('notes').select('*');
-     data = res.data;
-  }
-  
-  allNotes = data || [];
-  renderNoteList(allNotes);
-}
-
-function renderNoteList(notes) {
-  const container = document.getElementById('notes-list');
-  container.innerHTML = '';
-  
-  notes.forEach(note => {
-    const isLocked = lockedNotes[note.id];
-    const el = document.createElement('div');
-    el.className = `note-item ${activeNote?.id === note.id ? 'active' : ''}`;
-    el.innerHTML = `
-      <div class="note-title">
-        <span>${isLocked ? '<i class="ri-lock-fill"></i> ' : ''}${note.title || 'Untitled'}</span>
-        ${note.is_pinned ? '<i class="ri-pushpin-fill" style="color:var(--primary)"></i>' : ''}
-      </div>
-      <div class="note-preview">${isLocked ? '••••••••' : (note.content?.substring(0, 50) || 'No content')}</div>
-      <div class="note-meta">
-        <span>${new Date(note.created_at).toLocaleDateString()}</span>
-      </div>
-    `;
-    el.onclick = () => selectNote(note.id);
-    el.oncontextmenu = (e) => showContext(e, 'note', note.id);
-    container.appendChild(el);
-  });
-}
-
-function selectNote(id) {
-  activeNote = allNotes.find(n => n.id === id);
-  renderNoteList(allNotes); // Update active class
-  
-  // Check Lock
-  if (lockedNotes[id]) {
-    document.getElementById('locked-overlay').classList.remove('hidden');
-    document.getElementById('unlock-pass').value = '';
-    return;
-  }
-  
-  document.getElementById('locked-overlay').classList.add('hidden');
-  document.getElementById('note-title-input').value = activeNote.title || '';
-  document.getElementById('note-content').value = activeNote.content || '';
-  
-  updateStats();
-  updateLockIcon();
-}
-
-async function createNote() {
-  const newNote = { title: 'Untitled', content: '' };
-  // Fallback insert
-  const { data } = await sb.from('notes').insert([newNote]).select();
-  if (data) {
-    allNotes.unshift(data[0]);
-    selectNote(data[0].id);
-    refreshNotes();
-  }
-}
-
-function handleInput(textarea) {
-  const val = textarea.value;
-  
-  // Stealth AI Trigger
-  if (val.endsWith('aistart')) {
-    const cleanVal = val.replace('aistart', '');
-    textarea.value = cleanVal;
-    triggerStealthAI(cleanVal);
-    return;
-  }
-  
-  triggerSave();
-}
-
-function triggerSave() {
-  document.getElementById('save-indicator').innerText = 'Saving...';
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNote, 1000);
-  updateStats();
-}
-
-async function saveNote() {
-  if (!activeNote) return;
-  const title = document.getElementById('note-title-input').value;
-  const content = document.getElementById('note-content').value;
-  
-  await sb.from('notes').update({ title, content }).eq('id', activeNote.id);
-  document.getElementById('save-indicator').innerText = 'Saved';
-  
-  activeNote.title = title;
-  activeNote.content = content;
-  refreshNotes(); // Update sidebar list
-}
-
-// --- FEATURES ---
-function toggleFocusMode() {
-  const sidebar = document.querySelector('.notes-list-col');
-  const nav = document.getElementById('sidebar');
-  if (sidebar.style.display === 'none') {
-    sidebar.style.display = 'flex';
-    nav.style.display = 'flex';
-  } else {
-    sidebar.style.display = 'none';
-    nav.style.display = 'none';
-  }
-}
-
-function updateStats() {
-  const text = document.getElementById('note-content').value;
-  const words = text.trim().split(/\s+/).length;
-  const time = Math.ceil(words / 200);
-  document.getElementById('editor-stats').innerText = `${words} words · ${time} min read`;
-}
-
-function toggleLock() {
-  if (!activeNote) return;
-  if (lockedNotes[activeNote.id]) {
-    // Unlock
-    delete lockedNotes[activeNote.id];
-    toast('Note Unlocked');
-  } else {
-    // Lock
-    const pass = prompt("Set a password for this note:");
-    if (pass) {
-      lockedNotes[activeNote.id] = pass;
-      toast('Note Locked');
-    }
-  }
-  localStorage.setItem('verix_locks', JSON.stringify(lockedNotes));
-  updateLockIcon();
-  refreshNotes();
-}
-
-function updateLockIcon() {
-  const btn = document.getElementById('btn-lock');
-  if (activeNote && lockedNotes[activeNote.id]) {
-    btn.style.color = 'var(--primary)';
-    btn.innerHTML = '<i class="ri-lock-fill"></i>';
-  } else {
-    btn.style.color = 'var(--text-muted)';
-    btn.innerHTML = '<i class="ri-lock-unlock-line"></i>';
-  }
-}
-
-function unlockNote() {
-  const pass = document.getElementById('unlock-pass').value;
-  if (pass === lockedNotes[activeNote.id]) {
-    document.getElementById('locked-overlay').classList.add('hidden');
-    document.getElementById('note-title-input').value = activeNote.title;
-    document.getElementById('note-content').value = activeNote.content;
-  } else {
-    toast("Incorrect Password");
-  }
-}
-
-function insertMD(char) {
-  const ta = document.getElementById('note-content');
-  const start = ta.selectionStart;
-  const end = ta.selectionEnd;
-  const text = ta.value;
-  const before = text.substring(0, start);
-  const after = text.substring(end, text.length);
-  const select = text.substring(start, end);
-  
-  ta.value = before + char + select + char + after;
-  triggerSave();
-}
-
-// --- STEALTH AI & GRAMMAR ---
-async function triggerStealthAI(currentText) {
-  toast("Stealth AI Activated ✨");
-  // Simulating AI Humanizer (Replace with API call if you have a backend proxy)
-  // Since this is client-side only, we simulate a premium response
-  const loader = document.getElementById('loader');
-  loader.style.display = 'flex';
-  loader.style.opacity = '1';
-  
-  setTimeout(() => {
-    loader.style.opacity = '0';
-    setTimeout(() => loader.style.display = 'none', 500);
-    
-    // Simulate improvement
-    const improved = currentText + "\n\n[AI Refined]: The ideas here are solid, but I've polished the flow for better readability.";
-    document.getElementById('note-content').value = improved;
-    triggerSave();
-    toast("Text Humanized");
-  }, 1500);
-}
-
-function openGrammarCheck() {
-  toast("Scanning for grammar issues...");
-  setTimeout(() => toast("No critical errors found. Good writing!"), 2000);
-}
-
-// --- CONTEXT MENU ---
-function showContext(e, type, id) {
-  e.preventDefault();
-  const menu = document.getElementById('ctx-menu');
-  menu.style.display = 'block';
-  menu.style.left = e.pageX + 'px';
-  menu.style.top = e.pageY + 'px';
-  menu.classList.remove('hidden');
-  
-  let html = '';
-  if (type === 'note') {
-    html += `<div class="ctx-item" onclick="togglePinNote('${id}')"><i class="ri-pushpin-line"></i> Pin/Unpin</div>`;
-    html += `<div class="ctx-item delete" onclick="deleteNote('${id}')"><i class="ri-delete-bin-line"></i> Delete</div>`;
-  } else {
-    html += `<div class="ctx-item" onclick="renameFile('${id}')"><i class="ri-edit-line"></i> Rename</div>`;
-    html += `<div class="ctx-item delete" onclick="deleteFile('${id}')"><i class="ri-delete-bin-line"></i> Delete</div>`;
-  }
-  menu.innerHTML = html;
-  
-  document.addEventListener('click', () => menu.classList.add('hidden'), { once: true });
-}
-
-async function deleteNote(id) {
-  if(!confirm("Delete this note?")) return;
-  await sb.from('notes').delete().eq('id', id);
-  refreshNotes();
-  toast("Note moved to trash");
-}
-
-async function deleteFile(name) {
-  if(!confirm("Delete file?")) return;
-  const path = currentPath === '/' ? name : `${currentPath}/${name}`;
-  await sb.storage.from('files').remove([path]);
-  refreshDrive();
-}
-
-function toast(msg) {
-  const el = document.getElementById('toast');
-  document.getElementById('toast-msg').innerText = msg;
-  el.classList.add('active');
-  setTimeout(() => el.classList.remove('active'), 3000);
-}
-
-</script>
+  <div id="ctx-menu" class="ctx-menu hidden"></div>
+  <script src="app.js"></script>
 </body>
+
 </html>
