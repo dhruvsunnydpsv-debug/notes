@@ -13,14 +13,13 @@
 
 <body>
 
-  <!-- LOGIN -->
+  <!-- LOGIN (password only) -->
   <div id="loginScreen" class="screen active">
     <div class="login-wrap">
       <div class="login-card">
         <h1>PERSONAL VAULT</h1>
         <div class="sub">Your Secure Space</div>
-        <input type="email" id="loginEmail" placeholder="Email">
-        <input type="password" id="loginPass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+        <input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
         <button class="btn-primary" onclick="doLogin()">SIGN IN</button>
         <div class="login-err" id="loginErr"></div>
       </div>
@@ -37,7 +36,7 @@
         <button class="tab-btn" id="tabFiles" onclick="switchTab('files')">FILES</button>
       </div>
 
-      <!-- Notes tab -->
+      <!-- Notes tab content -->
       <div class="tab-content active" id="tcNotes">
         <div class="side-actions">
           <button class="btn-new" onclick="newNote()">+ NEW NOTE</button>
@@ -46,24 +45,19 @@
         <div class="side-list" id="notesList"></div>
       </div>
 
-      <!-- Files tab -->
+      <!-- Files tab content (just list, no upload here) -->
       <div class="tab-content" id="tcFiles">
-        <div class="upload-area">
-          <label class="upload-btn" for="fileInput">📁 UPLOAD FILES</label>
-          <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
-        </div>
         <div class="side-list" id="filesList"></div>
       </div>
 
-      <!-- Footer -->
+      <!-- Footer: just logout -->
       <div class="side-footer">
-        <button class="btn-settings" onclick="changePassword()">CHANGE PASSWORD</button>
         <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
       </div>
     </aside>
 
     <main class="main-content">
-      <!-- Empty state (default) -->
+      <!-- Empty state -->
       <div class="empty-state" id="emptyState">
         <div class="empty-state-head">
           <button class="menu-toggle" onclick="openSidebar()">☰</button>
@@ -87,11 +81,13 @@
         <div class="editor-foot" id="editorFoot">Saved</div>
       </div>
 
-      <!-- Files view -->
+      <!-- Files view (upload button is HERE, in the main area) -->
       <div class="files-view" id="filesView" style="display:none">
         <div class="files-head">
           <button class="menu-toggle" onclick="openSidebar()">☰</button>
           <h2>Your Files</h2>
+          <label class="upload-btn-main" for="fileInput">UPLOAD</label>
+          <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
         </div>
         <div class="files-grid" id="filesGrid"></div>
       </div>
@@ -107,7 +103,7 @@
     </div>
   </div>
 
-  <!-- Input popup (generic) -->
+  <!-- Input popup -->
   <div class="popup-bg" id="inputPopup">
     <div class="popup">
       <h3 id="popupTitle">Title</h3>

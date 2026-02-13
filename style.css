@@ -5,21 +5,21 @@
 }
 
 :root {
-  --bg: #0a0a0c;
-  --bg2: #111114;
-  --bg3: #18181c;
-  --bg4: #1f1f25;
-  --tx: #f0f0f5;
-  --tx2: #9898a8;
-  --tx3: rgba(152, 152, 168, .5);
-  --bd: rgba(255, 255, 255, .08);
-  --bd2: rgba(255, 255, 255, .15);
-  --ac: #34d399;
-  --ac2: #6ee7b7;
-  --acg: rgba(52, 211, 153, .12);
-  --acg2: rgba(52, 211, 153, .25);
-  --red: rgba(255, 120, 120, .9);
-  --redg: rgba(255, 100, 100, .15);
+  --bg: #f9f8f5;
+  --bg2: #ffffff;
+  --bg3: #f1f0ec;
+  --bg4: #e8e6e1;
+  --tx: #1c1c1e;
+  --tx2: #6e6e80;
+  --tx3: #a0a0b0;
+  --bd: #e5e3de;
+  --bd2: #d5d3ce;
+  --ac: #8b5cf6;
+  --ac2: #a78bfa;
+  --acg: rgba(139, 92, 246, .10);
+  --acg2: rgba(139, 92, 246, .20);
+  --red: #e54d4d;
+  --redg: rgba(229, 77, 77, .10);
 }
 
 body {
@@ -48,12 +48,12 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, .12);
+  background: rgba(0, 0, 0, .12);
   border-radius: 3px
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, .22)
+  background: rgba(0, 0, 0, .2)
 }
 
 /* SCREENS */
@@ -75,26 +75,25 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
+  background: linear-gradient(135deg, #f3f1ed 0%, #ece8e1 100%);
   padding: 20px
 }
 
 .login-card {
-  max-width: 420px;
+  max-width: 380px;
   width: 100%;
-  padding: 44px 36px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02));
-  border: 1px solid var(--bd2);
-  border-radius: 16px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, .4);
+  padding: 48px 36px;
+  background: #fff;
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, .08);
   animation: slideUp .5s cubic-bezier(.34, 1.56, .64, 1)
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(24px)
+    transform: translateY(20px)
   }
 
   to {
@@ -104,7 +103,7 @@ select {
 }
 
 .login-card h1 {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: 2px;
   margin-bottom: 6px;
@@ -114,19 +113,19 @@ select {
 .login-card .sub {
   color: var(--tx2);
   font-size: 12px;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
   letter-spacing: 1px
 }
 
 .login-card input {
   width: 100%;
-  padding: 14px;
-  background: rgba(30, 30, 38, .6);
-  border: 1px solid var(--bd2);
-  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
   color: var(--tx);
   font-size: 15px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   transition: .25s
 }
 
@@ -143,15 +142,14 @@ select {
   width: 100%;
   padding: 14px;
   background: var(--ac);
-  color: #0a0a0c;
+  color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 1.5px;
   cursor: pointer;
   transition: .25s;
-  margin-bottom: 10px;
   box-shadow: 0 4px 16px var(--acg2)
 }
 
@@ -167,7 +165,7 @@ select {
 .login-err {
   color: var(--red);
   font-size: 12px;
-  margin-top: 6px;
+  margin-top: 8px;
   min-height: 16px;
   text-align: center
 }
@@ -183,8 +181,8 @@ select {
 
 /* ─── SIDEBAR ─── */
 .sidebar {
-  width: 270px;
-  background: linear-gradient(180deg, rgba(17, 17, 20, .97), rgba(17, 17, 20, .99));
+  width: 260px;
+  background: var(--bg2);
   border-right: 1px solid var(--bd);
   display: flex;
   flex-direction: column;
@@ -200,10 +198,10 @@ select {
 
 .tab-btn {
   flex: 1;
-  padding: 15px 12px;
+  padding: 14px 12px;
   background: transparent;
   border: none;
-  color: var(--tx2);
+  color: var(--tx3);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.8px;
@@ -214,7 +212,7 @@ select {
 
 .tab-btn:hover {
   color: var(--tx);
-  background: rgba(255, 255, 255, .03)
+  background: rgba(0, 0, 0, .02)
 }
 
 .tab-btn.active {
@@ -230,6 +228,19 @@ select {
   height: 2px;
   background: var(--ac);
   border-radius: 2px 2px 0 0
+}
+
+/* Tab content */
+.tab-content {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0
+}
+
+.tab-content.active {
+  display: flex
 }
 
 /* Actions */
@@ -259,7 +270,7 @@ select {
 
 .btn-new {
   background: var(--ac);
-  color: #0a0a0c;
+  color: #fff;
   box-shadow: 0 3px 12px var(--acg2)
 }
 
@@ -272,13 +283,13 @@ select {
 }
 
 .btn-fold {
-  background: rgba(255, 255, 255, .07);
+  background: var(--bg);
   color: var(--tx2);
-  border: 1px solid var(--bd2)
+  border: 1px solid var(--bd)
 }
 
 .btn-fold:hover {
-  background: rgba(255, 255, 255, .11);
+  background: var(--bg3);
   color: var(--tx)
 }
 
@@ -313,14 +324,14 @@ select {
 }
 
 .folder-head:hover {
-  background: rgba(255, 255, 255, .06)
+  background: var(--bg3)
 }
 
 .folder-head.drag-over {
   background: var(--acg);
   border-color: var(--ac);
   transform: scale(1.02);
-  box-shadow: 0 0 16px var(--acg2)
+  box-shadow: 0 0 12px var(--acg2)
 }
 
 .folder-left {
@@ -363,7 +374,7 @@ select {
 
 .folder-act {
   padding: 3px 7px;
-  background: rgba(255, 255, 255, .08);
+  background: var(--bg3);
   border: none;
   border-radius: 3px;
   color: var(--tx2);
@@ -375,7 +386,7 @@ select {
 }
 
 .folder-act:hover {
-  background: rgba(255, 255, 255, .16);
+  background: var(--bg4);
   color: var(--tx)
 }
 
@@ -403,7 +414,7 @@ select {
 }
 
 .note-item:hover {
-  background: rgba(255, 255, 255, .06)
+  background: var(--bg3)
 }
 
 .note-item.active {
@@ -414,7 +425,7 @@ select {
 .note-item.dragging {
   opacity: .4;
   cursor: grabbing;
-  background: rgba(255, 255, 255, .08)
+  background: var(--bg3)
 }
 
 .note-item:active {
@@ -441,15 +452,15 @@ select {
 }
 
 .uncat-section.drag-over {
-  background: rgba(150, 100, 255, .12);
-  border-color: rgba(150, 100, 255, .4)
+  background: rgba(139, 92, 246, .08);
+  border-color: rgba(139, 92, 246, .3)
 }
 
 .uncat-head {
   padding: 7px 12px;
   font-size: 10px;
   font-weight: 700;
-  color: var(--tx2);
+  color: var(--tx3);
   letter-spacing: 1px;
   text-transform: uppercase
 }
@@ -465,50 +476,26 @@ select {
 .side-footer {
   padding: 10px 12px;
   border-top: 1px solid var(--bd);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
   flex-shrink: 0
-}
-
-.btn-settings {
-  width: 100%;
-  padding: 11px;
-  background: rgba(255, 255, 255, .06);
-  border: 1px solid var(--bd2);
-  border-radius: 6px;
-  color: var(--tx);
-  font-weight: 700;
-  font-size: 10px;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: .25s
-}
-
-.btn-settings:hover {
-  background: rgba(255, 255, 255, .1)
-}
-
-.btn-settings:active {
-  transform: scale(.98)
 }
 
 .btn-logout {
   width: 100%;
-  padding: 11px;
+  padding: 10px;
   background: transparent;
   border: 1px solid var(--bd);
   border-radius: 6px;
   color: var(--tx2);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 10px;
   letter-spacing: 1px;
   cursor: pointer;
-  transition: .25s
+  transition: .2s
 }
 
 .btn-logout:hover {
-  background: rgba(255, 255, 255, .04);
+  background: var(--bg3);
+  color: var(--tx);
   border-color: var(--bd2)
 }
 
@@ -519,7 +506,7 @@ select {
 /* ─── MAIN ─── */
 .main-content {
   flex: 1;
-  background: linear-gradient(135deg, rgba(10, 10, 12, .95), rgba(14, 14, 18, .95));
+  background: var(--bg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -534,6 +521,21 @@ select {
   align-items: center;
   justify-content: center;
   padding: 20px
+}
+
+.empty-state-head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  display: none
+}
+
+@media(max-width:768px) {
+  .empty-state-head {
+    display: block
+  }
 }
 
 .empty-state h2 {
@@ -575,7 +577,8 @@ select {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px
+  gap: 12px;
+  background: var(--bg2)
 }
 
 .menu-toggle {
@@ -585,7 +588,7 @@ select {
   background: var(--ac);
   border: none;
   border-radius: 10px;
-  color: #0a0a0c;
+  color: #fff;
   cursor: pointer;
   flex-shrink: 0;
   transition: .2s;
@@ -593,7 +596,7 @@ select {
   justify-content: center;
   font-size: 18px;
   font-weight: 700;
-  box-shadow: 0 4px 16px var(--acg2)
+  box-shadow: 0 4px 12px var(--acg2)
 }
 
 .menu-toggle:active {
@@ -628,8 +631,8 @@ select {
 
 .icon-btn {
   padding: 8px 14px;
-  background: rgba(255, 255, 255, .04);
-  border: 1px solid var(--bd2);
+  background: var(--bg);
+  border: 1px solid var(--bd);
   border-radius: 6px;
   color: var(--tx);
   cursor: pointer;
@@ -640,8 +643,8 @@ select {
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, .08);
-  border-color: rgba(255, 255, 255, .25)
+  background: var(--bg3);
+  border-color: var(--bd2)
 }
 
 .icon-btn:active {
@@ -649,19 +652,19 @@ select {
 }
 
 .icon-btn.danger {
-  border-color: rgba(255, 120, 120, .2);
+  border-color: rgba(229, 77, 77, .25);
   color: var(--red)
 }
 
 .icon-btn.danger:hover {
   background: var(--redg);
-  border-color: rgba(255, 120, 120, .4)
+  border-color: rgba(229, 77, 77, .4)
 }
 
 .note-body {
   flex: 1;
   padding: 20px;
-  background: transparent;
+  background: var(--bg2);
   border: none;
   font-size: 15px;
   line-height: 1.85;
@@ -683,8 +686,8 @@ select {
   text-align: right;
   font-size: 11px;
   color: var(--tx2);
-  letter-spacing: 1px;
-  background: linear-gradient(180deg, rgba(17, 17, 20, .4), rgba(17, 17, 20, .7))
+  letter-spacing: .8px;
+  background: var(--bg)
 }
 
 /* ─── FILES VIEW ─── */
@@ -701,13 +704,37 @@ select {
   border-bottom: 1px solid var(--bd);
   display: flex;
   align-items: center;
-  gap: 12px
+  gap: 12px;
+  background: var(--bg2)
 }
 
 .files-head h2 {
   font-size: 20px;
   font-weight: 700;
-  letter-spacing: 1px
+  letter-spacing: 1px;
+  flex: 1
+}
+
+.upload-btn-main {
+  padding: 10px 20px;
+  background: var(--ac);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: .2s;
+  box-shadow: 0 3px 10px var(--acg2)
+}
+
+.upload-btn-main:hover {
+  background: var(--ac2)
+}
+
+.upload-btn-main:active {
+  transform: scale(.98)
 }
 
 .files-grid {
@@ -726,7 +753,7 @@ select {
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, .03);
+  background: var(--bg2);
   border: 1px solid var(--bd);
   border-radius: 10px;
   transition: .25s;
@@ -734,10 +761,10 @@ select {
 }
 
 .file-card:hover {
-  background: rgba(255, 255, 255, .06);
+  background: var(--bg3);
   border-color: var(--bd2);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, .2)
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .06)
 }
 
 .fc-info {
@@ -780,8 +807,8 @@ select {
 
 .fc-btn {
   padding: 7px 12px;
-  background: rgba(255, 255, 255, .08);
-  border: none;
+  background: var(--bg);
+  border: 1px solid var(--bd);
   border-radius: 5px;
   color: var(--tx);
   font-size: 10px;
@@ -792,11 +819,13 @@ select {
 }
 
 .fc-btn:hover {
-  background: rgba(255, 255, 255, .16)
+  background: var(--bg3);
+  border-color: var(--bd2)
 }
 
 .fc-btn.danger {
-  color: var(--red)
+  color: var(--red);
+  border-color: rgba(229, 77, 77, .2)
 }
 
 .fc-btn.danger:hover {
@@ -810,13 +839,13 @@ select {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(24, 24, 28, .95);
-  border: 1px solid var(--bd2);
+  background: var(--bg2);
+  border: 1px solid var(--bd);
   border-radius: 12px;
   padding: 14px 22px;
   min-width: 260px;
   z-index: 1000;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, .5)
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .1)
 }
 
 .upload-bar.active {
@@ -826,7 +855,7 @@ select {
 
 .upload-track {
   height: 3px;
-  background: rgba(255, 255, 255, .08);
+  background: var(--bg4);
   border-radius: 2px;
   margin-bottom: 8px;
   overflow: hidden;
@@ -861,16 +890,16 @@ select {
   letter-spacing: .5px
 }
 
-/* ─── FOLDER POPUP ─── */
+/* ─── POPUP ─── */
 .popup-bg {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .7);
+  background: rgba(0, 0, 0, .3);
   display: none;
   align-items: center;
   justify-content: center;
   z-index: 1001;
-  backdrop-filter: blur(4px)
+  backdrop-filter: blur(6px)
 }
 
 .popup-bg.active {
@@ -878,20 +907,20 @@ select {
 }
 
 .popup {
-  background: linear-gradient(135deg, rgba(24, 24, 28, .98), rgba(20, 20, 24, .98));
-  border: 1px solid var(--bd2);
+  background: var(--bg2);
+  border: 1px solid var(--bd);
   border-radius: 14px;
   padding: 24px;
-  max-width: 400px;
+  max-width: 380px;
   width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .12);
   animation: popUp .3s cubic-bezier(.34, 1.56, .64, 1)
 }
 
 @keyframes popUp {
   from {
     opacity: 0;
-    transform: translateY(24px) scale(.95)
+    transform: translateY(20px) scale(.96)
   }
 
   to {
@@ -911,8 +940,8 @@ select {
 .popup input {
   width: 100%;
   padding: 12px;
-  background: rgba(30, 30, 38, .5);
-  border: 1px solid var(--bd2);
+  background: var(--bg);
+  border: 1px solid var(--bd);
   border-radius: 8px;
   color: var(--tx);
   font-size: 14px;
@@ -937,7 +966,7 @@ select {
 
 .popup-opt {
   padding: 12px 14px;
-  background: rgba(255, 255, 255, .03);
+  background: var(--bg);
   border: 1px solid var(--bd);
   border-radius: 8px;
   margin-bottom: 6px;
@@ -952,7 +981,7 @@ select {
 }
 
 .popup-opt:hover {
-  background: rgba(255, 255, 255, .07);
+  background: var(--bg3);
   border-color: var(--bd2);
   transform: translateX(3px)
 }
@@ -974,7 +1003,7 @@ select {
 .popup-cancel {
   flex: 1;
   padding: 11px;
-  background: rgba(255, 255, 255, .05);
+  background: var(--bg);
   border: 1px solid var(--bd);
   border-radius: 8px;
   color: var(--tx2);
@@ -986,7 +1015,7 @@ select {
 }
 
 .popup-cancel:hover {
-  background: rgba(255, 255, 255, .08)
+  background: var(--bg3)
 }
 
 .popup-ok {
@@ -995,7 +1024,7 @@ select {
   background: var(--ac);
   border: none;
   border-radius: 8px;
-  color: #0a0a0c;
+  color: #fff;
   font-weight: 700;
   font-size: 11px;
   letter-spacing: .8px;
@@ -1007,46 +1036,20 @@ select {
   background: var(--ac2)
 }
 
-/* File upload area */
-.upload-area {
-  padding: 10px 14px
-}
-
-.upload-btn {
-  width: 100%;
-  padding: 11px;
-  background: rgba(255, 255, 255, .04);
-  border: 2px dashed var(--bd2);
-  border-radius: 8px;
-  color: var(--tx2);
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: .8px;
-  cursor: pointer;
-  transition: .2s;
-  text-align: center
-}
-
-.upload-btn:hover {
-  border-color: var(--ac);
-  color: var(--ac);
-  background: var(--acg)
-}
-
 /* Toast */
 .toast {
   position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%) translateY(50px);
-  background: var(--bg3);
-  border: 1px solid var(--bd2);
+  background: var(--bg2);
+  border: 1px solid var(--bd);
   padding: 10px 20px;
   border-radius: 10px;
   color: var(--tx);
   font-size: 12px;
   font-weight: 500;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .1);
   opacity: 0;
   transition: .3s cubic-bezier(.16, 1, .3, 1);
   z-index: 5000;
@@ -1064,7 +1067,7 @@ select {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .6);
+  background: rgba(0, 0, 0, .25);
   z-index: 150;
   backdrop-filter: blur(2px)
 }
@@ -1084,10 +1087,10 @@ select {
     left: 0;
     top: 0;
     height: 100%;
-    width: 270px;
+    width: 260px;
     transform: translateX(-100%);
-    box-shadow: 2px 0 20px rgba(0, 0, 0, .5);
-    background: rgba(17, 17, 20, 1)
+    box-shadow: 2px 0 20px rgba(0, 0, 0, .1);
+    background: var(--bg2)
   }
 
   .sidebar.mobile-open {
@@ -1113,15 +1116,19 @@ select {
     padding: 6px 10px;
     font-size: 10px
   }
+
+  .files-head {
+    padding: 12px
+  }
 }
 
 @media(max-width:480px) {
   .sidebar {
-    width: 260px
+    width: 250px
   }
 
   .login-card {
-    padding: 32px 24px
+    padding: 36px 24px
   }
 
   .btn-new,

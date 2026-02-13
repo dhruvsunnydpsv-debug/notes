@@ -1,10 +1,16 @@
 /* ═══════════════════════════════════════════
    Personal Vault — app.js
-   All features: Notes, Folders, Files, Move, Drag, Upload
+   Password-only login, Notes, Folders, Files
    ═══════════════════════════════════════════ */
 
 const SB_URL = 'https://psukmzzuhpprfoanvjat.supabase.co';
 const SB_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304';
+
+// ─── HARDCODED LOGIN EMAIL (password-only UI) ───
+// The login screen only shows a password field.
+// This email is used behind the scenes with Supabase auth.
+const AUTH_EMAIL = 'dhruvsunnydpsv@gmail.com';
+
 let sb;
 try { sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true } }) }
 catch (e) { console.error('SB init:', e) }
@@ -14,8 +20,8 @@ let notes = [];
 let activeNote = null;
 let saveTimer = null;
 let curTab = 'notes';
-let folders = JSON.parse(localStorage.getItem('pv_folders') || '[]');      // [{name,open}]
-let noteFolder = JSON.parse(localStorage.getItem('pv_notefolder') || '{}'); // noteId -> folderName
+let folders = JSON.parse(localStorage.getItem('pv_folders') || '[]');
+let noteFolder = JSON.parse(localStorage.getItem('pv_notefolder') || '{}');
 let currentUser = null;
 
 /* ── INIT ── */
@@ -23,22 +29,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     if (!sb) return;
     const { data: { session } } = await sb.auth.getSession();
-    if (session && session.user) { startApp(session.user) }
+    if (session && session.user) startApp(session.user);
   } catch (e) { console.error('Init:', e) }
 });
 
-/* ── AUTH ── */
+/* ══════════════════════════════════
+   AUTH (password-only)
+   ══════════════════════════════════ */
 async function doLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
   const pass = document.getElementById('loginPass').value;
   const err = document.getElementById('loginErr');
-  if (!email || !pass) { err.textContent = 'Enter email and password'; return }
+  if (!pass) { err.textContent = 'Enter your password'; return }
   err.textContent = '';
   try {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    const { data, error } = await sb.auth.signInWithPassword({ email: AUTH_EMAIL, password: pass });
     if (error) throw error;
     startApp(data.user);
-  } catch (ex) { err.textContent = ex.message || 'Login failed' }
+  } catch (ex) {
+    err.textContent = ex.message || 'Login failed';
+  }
 }
 
 async function doLogout() {
@@ -54,20 +63,8 @@ function startApp(user) {
   loadFilesSidebar();
 }
 
-/* ── CHANGE PASSWORD ── */
-function changePassword() {
-  showInput('Change Password', 'New password:', 'CHANGE', async val => {
-    if (!val || val.length < 6) { toast('Password must be 6+ characters'); return }
-    try {
-      const { error } = await sb.auth.updateUser({ password: val });
-      if (error) throw error;
-      toast('Password changed!');
-    } catch (e) { toast(e.message || 'Error') }
-  });
-}
-
 /* ══════════════════════════════════
-   TAB SWITCHING
+   TABS
    ══════════════════════════════════ */
 function switchTab(tab) {
   curTab = tab;
@@ -75,7 +72,6 @@ function switchTab(tab) {
   document.getElementById('tabFiles').classList.toggle('active', tab === 'files');
   document.getElementById('tcNotes').classList.toggle('active', tab === 'notes');
   document.getElementById('tcFiles').classList.toggle('active', tab === 'files');
-  // Main area
   document.getElementById('emptyState').style.display = tab === 'notes' && !activeNote ? 'flex' : 'none';
   document.getElementById('noteEditor').style.display = tab === 'notes' && activeNote ? 'flex' : 'none';
   document.getElementById('filesView').style.display = tab === 'files' ? 'flex' : 'none';
@@ -98,68 +94,39 @@ function renderNotesList() {
   const list = document.getElementById('notesList');
   list.innerHTML = '';
 
-  // Render each folder
   folders.forEach((f, fi) => {
     const isOpen = f.open !== false;
     const fNotes = notes.filter(n => noteFolder[n.id] === f.name);
-
     const section = document.createElement('div');
     section.className = 'folder-section';
 
-    // Folder header
     const head = document.createElement('div');
     head.className = 'folder-head' + (isOpen ? '' : ' collapsed');
-    head.innerHTML = `
-      <div class="folder-left">
-        <span class="folder-arrow">▼</span>
-        <span class="folder-name">📁 ${esc(f.name)}</span>
-      </div>
-      <div class="folder-acts">
-        <button class="folder-act" onclick="event.stopPropagation();renameFolder(${fi})">✎</button>
-        <button class="folder-act" onclick="event.stopPropagation();deleteFolder(${fi})">✕</button>
-      </div>`;
+    head.innerHTML = `<div class="folder-left"><span class="folder-arrow">▼</span><span class="folder-name">📁 ${esc(f.name)}</span></div><div class="folder-acts"><button class="folder-act" onclick="event.stopPropagation();renameFolder(${fi})">✎</button><button class="folder-act" onclick="event.stopPropagation();deleteFolder(${fi})">✕</button></div>`;
     head.onclick = () => { folders[fi].open = !isOpen; saveFolders(); renderNotesList() };
-
-    // Drag over folder to move note
     head.ondragover = e => { e.preventDefault(); head.classList.add('drag-over') };
     head.ondragleave = () => head.classList.remove('drag-over');
     head.ondrop = e => { e.preventDefault(); head.classList.remove('drag-over'); const id = e.dataTransfer.getData('noteId'); if (id) { noteFolder[id] = f.name; saveNoteFolder(); renderNotesList(); toast('Moved to ' + f.name) } };
-
     section.appendChild(head);
 
-    // Folder notes
-    const notesWrap = document.createElement('div');
-    notesWrap.className = 'folder-notes' + (isOpen ? '' : ' collapsed');
-    fNotes.forEach(n => notesWrap.appendChild(makeNoteItem(n)));
-    if (!fNotes.length) {
-      const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'Empty'; notesWrap.appendChild(em);
-    }
-    section.appendChild(notesWrap);
+    const wrap = document.createElement('div');
+    wrap.className = 'folder-notes' + (isOpen ? '' : ' collapsed');
+    fNotes.forEach(n => wrap.appendChild(makeNoteItem(n)));
+    if (!fNotes.length) { const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'Empty'; wrap.appendChild(em) }
+    section.appendChild(wrap);
     list.appendChild(section);
   });
 
-  // Uncategorized
   const uncatNotes = notes.filter(n => !noteFolder[n.id] || !folders.find(f => f.name === noteFolder[n.id]));
   if (uncatNotes.length || !folders.length) {
-    const uncatSection = document.createElement('div');
-    uncatSection.className = 'uncat-section';
-
-    if (folders.length) {
-      const uncatHead = document.createElement('div');
-      uncatHead.className = 'uncat-head'; uncatHead.textContent = 'Uncategorized Notes';
-      uncatSection.appendChild(uncatHead);
-    }
-
-    uncatSection.ondragover = e => { e.preventDefault(); uncatSection.classList.add('drag-over') };
-    uncatSection.ondragleave = () => uncatSection.classList.remove('drag-over');
-    uncatSection.ondrop = e => { e.preventDefault(); uncatSection.classList.remove('drag-over'); const id = e.dataTransfer.getData('noteId'); if (id) { delete noteFolder[id]; saveNoteFolder(); renderNotesList(); toast('Moved to Uncategorized') } };
-
-    uncatNotes.forEach(n => uncatSection.appendChild(makeNoteItem(n)));
-    if (!uncatNotes.length && !folders.length) {
-      const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'No notes yet. Click + NEW NOTE to start.';
-      uncatSection.appendChild(em);
-    }
-    list.appendChild(uncatSection);
+    const us = document.createElement('div'); us.className = 'uncat-section';
+    if (folders.length) { const uh = document.createElement('div'); uh.className = 'uncat-head'; uh.textContent = 'Uncategorized'; us.appendChild(uh) }
+    us.ondragover = e => { e.preventDefault(); us.classList.add('drag-over') };
+    us.ondragleave = () => us.classList.remove('drag-over');
+    us.ondrop = e => { e.preventDefault(); us.classList.remove('drag-over'); const id = e.dataTransfer.getData('noteId'); if (id) { delete noteFolder[id]; saveNoteFolder(); renderNotesList(); toast('Moved to Uncategorized') } };
+    uncatNotes.forEach(n => us.appendChild(makeNoteItem(n)));
+    if (!uncatNotes.length && !folders.length) { const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'No notes yet. Click + NEW NOTE.'; us.appendChild(em) }
+    list.appendChild(us);
   }
 }
 
@@ -167,7 +134,7 @@ function makeNoteItem(n) {
   const div = document.createElement('div');
   div.className = 'note-item' + (activeNote && activeNote.id === n.id ? ' active' : '');
   div.draggable = true;
-  div.innerHTML = '<div class="note-title">📄 ' + esc(n.title || 'Untitled') + '</div>';
+  div.innerHTML = '<div class="note-title">' + esc(n.title || 'Untitled') + '</div>';
   div.onclick = () => openNote(n.id);
   div.ondragstart = e => { e.dataTransfer.setData('noteId', n.id); div.classList.add('dragging') };
   div.ondragend = () => div.classList.remove('dragging');
@@ -176,7 +143,10 @@ function makeNoteItem(n) {
 
 async function newNote() {
   try {
-    const { data, error } = await sb.from('notes').insert([{ title: '', content: '' }]).select();
+    // Include user_id for RLS policies
+    const insertData = { title: '', content: '' };
+    if (currentUser) insertData.user_id = currentUser.id;
+    const { data, error } = await sb.from('notes').insert([insertData]).select();
     if (error) throw error;
     if (data && data[0]) { notes.unshift(data[0]); openNote(data[0].id); toast('Note created') }
   } catch (e) { toast('Error: ' + e.message); console.error(e) }
@@ -193,7 +163,6 @@ function openNote(id) {
   document.getElementById('noteBody').value = activeNote.content || '';
   updateFooter();
   closeSidebar();
-  // switch to notes tab if on files
   if (curTab !== 'notes') {
     curTab = 'notes';
     document.getElementById('tabNotes').classList.add('active');
@@ -212,7 +181,6 @@ function autoSave() {
   document.getElementById('editorFoot').textContent = 'Saving...';
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(saveNote, 800);
-  updateFooter();
 }
 
 async function saveNote() {
@@ -222,16 +190,14 @@ async function saveNote() {
   try {
     await sb.from('notes').update({ title, content }).eq('id', activeNote.id);
     activeNote.title = title; activeNote.content = content;
-    document.getElementById('editorFoot').textContent = 'Saved';
-    renderNotesList();
+    updateFooter(); renderNotesList();
   } catch (e) { document.getElementById('editorFoot').textContent = 'Error saving'; console.error(e) }
 }
 
 function updateFooter() {
   const body = document.getElementById('noteBody').value;
-  const words = body.trim() ? body.trim().split(/\s+/).length : 0;
-  const chars = body.length;
-  document.getElementById('editorFoot').textContent = `${words} words · ${chars} chars · Saved`;
+  const w = body.trim() ? body.trim().split(/\s+/).length : 0;
+  document.getElementById('editorFoot').textContent = w + ' words · ' + body.length + ' chars · Saved';
 }
 
 async function deleteActiveNote() {
@@ -252,7 +218,7 @@ async function deleteActiveNote() {
 function newFolder() {
   showInput('New Folder', 'Folder name:', 'CREATE', name => {
     if (!name.trim()) return;
-    if (folders.find(f => f.name === name)) { toast('Already exists'); return }
+    if (folders.find(f => f.name === name.trim())) { toast('Already exists'); return }
     folders.push({ name: name.trim(), open: true });
     saveFolders(); renderNotesList(); toast('Folder created');
   });
@@ -263,7 +229,6 @@ function renameFolder(idx) {
     if (!name.trim()) return;
     const oldName = folders[idx].name;
     folders[idx].name = name.trim();
-    // Update note assignments
     Object.keys(noteFolder).forEach(k => { if (noteFolder[k] === oldName) noteFolder[k] = name.trim() });
     saveFolders(); saveNoteFolder(); renderNotesList(); toast('Renamed');
   }, folders[idx].name);
@@ -285,15 +250,11 @@ function showMovePopup() {
   if (!activeNote) return;
   const list = document.getElementById('moveList');
   list.innerHTML = '';
-
-  // Uncategorized option
   const uncat = document.createElement('div');
   uncat.className = 'popup-opt uncat';
   uncat.textContent = '📦 Uncategorized';
   uncat.onclick = () => { delete noteFolder[activeNote.id]; saveNoteFolder(); renderNotesList(); closePopup('movePopup'); toast('Moved to Uncategorized') };
   list.appendChild(uncat);
-
-  // Folder options
   folders.forEach(f => {
     const opt = document.createElement('div');
     opt.className = 'popup-opt';
@@ -301,15 +262,11 @@ function showMovePopup() {
     opt.onclick = () => { noteFolder[activeNote.id] = f.name; saveNoteFolder(); renderNotesList(); closePopup('movePopup'); toast('Moved to ' + f.name) };
     list.appendChild(opt);
   });
-
-  if (!folders.length) {
-    const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'Create folders first'; list.appendChild(em);
-  }
-
+  if (!folders.length) { const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'Create folders first'; list.appendChild(em) }
   document.getElementById('movePopup').classList.add('active');
 }
 
-/* ── AI HUMANIZER ── */
+/* ── AI ── */
 async function runAI(text) {
   if (!text.trim()) { toast('Write something first'); return }
   document.getElementById('editorFoot').textContent = 'AI Working...';
@@ -336,14 +293,13 @@ async function loadFilesSidebar() {
     if (data) {
       const items = data.filter(f => f.name !== '.keep');
       items.forEach(f => {
-        const isDir = !f.metadata;
         const div = document.createElement('div');
         div.className = 'note-item';
-        div.innerHTML = '<div class="note-title">' + (isDir ? '📁' : '📄') + ' ' + esc(f.name) + '</div>';
-        div.onclick = () => { switchTab('files'); renderFilesGrid() };
+        div.innerHTML = '<div class="note-title">' + fileIcon(f.name) + ' ' + esc(f.name) + '</div>';
+        div.onclick = () => switchTab('files');
         list.appendChild(div);
       });
-      if (!items.length) { list.innerHTML = '<div class="empty-msg">No files yet</div>' }
+      if (!items.length) list.innerHTML = '<div class="empty-msg">No files yet</div>';
     }
   } catch (e) { console.error(e) }
 }
@@ -354,25 +310,13 @@ async function renderFilesGrid() {
     const grid = document.getElementById('filesGrid');
     grid.innerHTML = '';
     if (!data || !data.filter(f => f.name !== '.keep').length) {
-      grid.innerHTML = '<div class="empty-msg" style="padding:40px;text-align:center;color:var(--tx3)">No files yet.<br>Use the sidebar to upload.</div>';
+      grid.innerHTML = '<div class="empty-msg" style="padding:40px;text-align:center">No files yet. Click UPLOAD to add files.</div>';
       return;
     }
     data.filter(f => f.name !== '.keep').forEach(f => {
-      const isDir = !f.metadata;
       const card = document.createElement('div');
       card.className = 'file-card';
-      card.innerHTML = `
-        <div class="fc-info">
-          <span class="fc-icon">${isDir ? '📁' : fileIcon(f.name)}</span>
-          <div class="fc-details">
-            <div class="fc-name">${esc(f.name)}</div>
-            <div class="fc-meta">${f.metadata ? fmtSize(f.metadata.size) : ''}</div>
-          </div>
-        </div>
-        <div class="fc-acts">
-          ${isDir ? '' : `<button class="fc-btn" onclick="previewFile('${esc(f.name)}')">VIEW</button>`}
-          <button class="fc-btn danger" onclick="deleteFile('${esc(f.name)}')">DEL</button>
-        </div>`;
+      card.innerHTML = `<div class="fc-info"><span class="fc-icon">${fileIcon(f.name)}</span><div class="fc-details"><div class="fc-name">${esc(f.name)}</div><div class="fc-meta">${f.metadata ? fmtSize(f.metadata.size) : ''}</div></div></div><div class="fc-acts"><button class="fc-btn" onclick="previewFile('${esc(f.name)}')">VIEW</button><button class="fc-btn danger" onclick="deleteFile('${esc(f.name)}')">DEL</button></div>`;
       grid.appendChild(card);
     });
   } catch (e) { console.error(e) }
@@ -446,19 +390,16 @@ function showInput(title, placeholder, btnText, onOk, defaultVal) {
   const inp = document.getElementById('popupInput');
   inp.placeholder = placeholder;
   inp.value = defaultVal || '';
-  document.getElementById('popupOk').textContent = btnText;
+  const okBtn = document.getElementById('popupOk');
+  okBtn.textContent = btnText;
   document.getElementById('inputPopup').classList.add('active');
   setTimeout(() => { inp.focus(); if (defaultVal) inp.select() }, 100);
-
-  const okBtn = document.getElementById('popupOk');
-  const handler = () => { onOk(inp.value); closePopup('inputPopup'); okBtn.removeEventListener('click', handler) };
-  // Remove old listeners by cloning
   const newBtn = okBtn.cloneNode(true);
   okBtn.parentNode.replaceChild(newBtn, okBtn);
-  newBtn.addEventListener('click', handler);
   newBtn.id = 'popupOk';
-
-  inp.onkeydown = e => { if (e.key === 'Enter') { handler() } if (e.key === 'Escape') closePopup('inputPopup') };
+  const handler = () => { onOk(inp.value); closePopup('inputPopup') };
+  newBtn.addEventListener('click', handler);
+  inp.onkeydown = e => { if (e.key === 'Enter') handler(); if (e.key === 'Escape') closePopup('inputPopup') };
 }
 
 /* ══════════════════════════════════
@@ -468,8 +409,7 @@ function esc(s) { return s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt
 
 function toast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.remove('show'), 2500);
 }
