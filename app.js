@@ -1,14 +1,10 @@
 /* ═══════════════════════════════════════════
    Personal Vault — app.js
-   Password-only login, Notes, Folders, Files
+   Password-only login · Cloud-synced folders
    ═══════════════════════════════════════════ */
 
 const SB_URL = 'https://psukmzzuhpprfoanvjat.supabase.co';
 const SB_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304';
-
-// ─── HARDCODED LOGIN EMAIL (password-only UI) ───
-// The login screen only shows a password field.
-// This email is used behind the scenes with Supabase auth.
 const AUTH_EMAIL = 'dhruv12306@outlook.com';
 
 let sb;
@@ -19,9 +15,10 @@ catch (e) { console.error('SB init:', e) }
 let notes = [];
 let activeNote = null;
 let saveTimer = null;
+let configTimer = null;
 let curTab = 'notes';
-let folders = JSON.parse(localStorage.getItem('pv_folders') || '[]');
-let noteFolder = JSON.parse(localStorage.getItem('pv_notefolder') || '{}');
+let folders = [];
+let noteFolder = {};
 let currentUser = null;
 
 /* ── INIT ── */
@@ -34,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* ══════════════════════════════════
-   AUTH (password-only)
+   AUTH
    ══════════════════════════════════ */
 async function doLogin() {
   const pass = document.getElementById('loginPass').value;
@@ -45,9 +42,7 @@ async function doLogin() {
     const { data, error } = await sb.auth.signInWithPassword({ email: AUTH_EMAIL, password: pass });
     if (error) throw error;
     startApp(data.user);
-  } catch (ex) {
-    err.textContent = ex.message || 'Login failed';
-  }
+  } catch (ex) { err.textContent = ex.message || 'Login failed' }
 }
 
 async function doLogout() {
@@ -59,8 +54,47 @@ function startApp(user) {
   currentUser = user;
   document.getElementById('loginScreen').classList.remove('active');
   document.getElementById('appScreen').classList.add('active');
-  loadNotes();
-  loadFilesSidebar();
+  loadConfig().then(() => { loadNotes(); loadFilesSidebar() });
+}
+
+/* ══════════════════════════════════
+   CLOUD CONFIG (folders sync)
+   Stored as .vault_config.json in Supabase storage
+   ══════════════════════════════════ */
+const CONFIG_PATH = '.vault_config.json';
+
+async function loadConfig() {
+  try {
+    const { data } = await sb.storage.from('files').download(CONFIG_PATH);
+    if (data) {
+      const text = await data.text();
+      const cfg = JSON.parse(text);
+      folders = cfg.folders || [];
+      noteFolder = cfg.noteFolder || {};
+    }
+  } catch (e) {
+    // Config doesn't exist yet — use localStorage fallback for migration
+    folders = JSON.parse(localStorage.getItem('pv_folders') || '[]');
+    noteFolder = JSON.parse(localStorage.getItem('pv_notefolder') || '{}');
+    // Save to cloud immediately
+    saveConfigNow();
+  }
+}
+
+function saveConfig() {
+  // Debounce saves to avoid hammering storage
+  if (configTimer) clearTimeout(configTimer);
+  configTimer = setTimeout(saveConfigNow, 500);
+}
+
+async function saveConfigNow() {
+  try {
+    const blob = new Blob([JSON.stringify({ folders, noteFolder })], { type: 'application/json' });
+    await sb.storage.from('files').upload(CONFIG_PATH, blob, { upsert: true });
+  } catch (e) { console.error('Config save error:', e) }
+  // Also keep localStorage as local cache
+  localStorage.setItem('pv_folders', JSON.stringify(folders));
+  localStorage.setItem('pv_notefolder', JSON.stringify(noteFolder));
 }
 
 /* ══════════════════════════════════
@@ -102,11 +136,11 @@ function renderNotesList() {
 
     const head = document.createElement('div');
     head.className = 'folder-head' + (isOpen ? '' : ' collapsed');
-    head.innerHTML = `<div class="folder-left"><span class="folder-arrow">▼</span><span class="folder-name">📁 ${esc(f.name)}</span></div><div class="folder-acts"><button class="folder-act" onclick="event.stopPropagation();renameFolder(${fi})">✎</button><button class="folder-act" onclick="event.stopPropagation();deleteFolder(${fi})">✕</button></div>`;
-    head.onclick = () => { folders[fi].open = !isOpen; saveFolders(); renderNotesList() };
+    head.innerHTML = '<div class="folder-left"><span class="folder-arrow">▼</span><span class="folder-name">📁 ' + esc(f.name) + '</span></div><div class="folder-acts"><button class="folder-act" onclick="event.stopPropagation();renameFolder(' + fi + ')">✎</button><button class="folder-act" onclick="event.stopPropagation();deleteFolder(' + fi + ')">✕</button></div>';
+    head.onclick = () => { folders[fi].open = !isOpen; saveConfig(); renderNotesList() };
     head.ondragover = e => { e.preventDefault(); head.classList.add('drag-over') };
     head.ondragleave = () => head.classList.remove('drag-over');
-    head.ondrop = e => { e.preventDefault(); head.classList.remove('drag-over'); const id = e.dataTransfer.getData('noteId'); if (id) { noteFolder[id] = f.name; saveNoteFolder(); renderNotesList(); toast('Moved to ' + f.name) } };
+    head.ondrop = e => { e.preventDefault(); head.classList.remove('drag-over'); const id = e.dataTransfer.getData('noteId'); if (id) { noteFolder[id] = f.name; saveConfig(); renderNotesList(); toast('Moved to ' + f.name) } };
     section.appendChild(head);
 
     const wrap = document.createElement('div');
@@ -123,7 +157,7 @@ function renderNotesList() {
     if (folders.length) { const uh = document.createElement('div'); uh.className = 'uncat-head'; uh.textContent = 'Uncategorized'; us.appendChild(uh) }
     us.ondragover = e => { e.preventDefault(); us.classList.add('drag-over') };
     us.ondragleave = () => us.classList.remove('drag-over');
-    us.ondrop = e => { e.preventDefault(); us.classList.remove('drag-over'); const id = e.dataTransfer.getData('noteId'); if (id) { delete noteFolder[id]; saveNoteFolder(); renderNotesList(); toast('Moved to Uncategorized') } };
+    us.ondrop = e => { e.preventDefault(); us.classList.remove('drag-over'); const id = e.dataTransfer.getData('noteId'); if (id) { delete noteFolder[id]; saveConfig(); renderNotesList(); toast('Moved to Uncategorized') } };
     uncatNotes.forEach(n => us.appendChild(makeNoteItem(n)));
     if (!uncatNotes.length && !folders.length) { const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'No notes yet. Click + NEW NOTE.'; us.appendChild(em) }
     list.appendChild(us);
@@ -203,7 +237,7 @@ async function deleteActiveNote() {
   try {
     await sb.from('notes').delete().eq('id', activeNote.id);
     notes = notes.filter(n => n.id !== activeNote.id);
-    delete noteFolder[activeNote.id]; saveNoteFolder();
+    delete noteFolder[activeNote.id]; saveConfig();
     activeNote = null;
     document.getElementById('noteEditor').style.display = 'none';
     document.getElementById('emptyState').style.display = 'flex';
@@ -211,13 +245,13 @@ async function deleteActiveNote() {
   } catch (e) { toast('Error'); console.error(e) }
 }
 
-/* ── FOLDERS ── */
+/* ── FOLDERS (cloud synced) ── */
 function newFolder() {
   showInput('New Folder', 'Folder name:', 'CREATE', name => {
     if (!name.trim()) return;
     if (folders.find(f => f.name === name.trim())) { toast('Already exists'); return }
     folders.push({ name: name.trim(), open: true });
-    saveFolders(); renderNotesList(); toast('Folder created');
+    saveConfig(); renderNotesList(); toast('Folder created');
   });
 }
 
@@ -227,7 +261,7 @@ function renameFolder(idx) {
     const oldName = folders[idx].name;
     folders[idx].name = name.trim();
     Object.keys(noteFolder).forEach(k => { if (noteFolder[k] === oldName) noteFolder[k] = name.trim() });
-    saveFolders(); saveNoteFolder(); renderNotesList(); toast('Renamed');
+    saveConfig(); renderNotesList(); toast('Renamed');
   }, folders[idx].name);
 }
 
@@ -236,27 +270,21 @@ function deleteFolder(idx) {
   const name = folders[idx].name;
   folders.splice(idx, 1);
   Object.keys(noteFolder).forEach(k => { if (noteFolder[k] === name) delete noteFolder[k] });
-  saveFolders(); saveNoteFolder(); renderNotesList(); toast('Folder deleted');
+  saveConfig(); renderNotesList(); toast('Folder deleted');
 }
 
-function saveFolders() { localStorage.setItem('pv_folders', JSON.stringify(folders)) }
-function saveNoteFolder() { localStorage.setItem('pv_notefolder', JSON.stringify(noteFolder)) }
-
-/* ── MOVE TO FOLDER POPUP ── */
+/* ── MOVE TO FOLDER ── */
 function showMovePopup() {
   if (!activeNote) return;
   const list = document.getElementById('moveList');
   list.innerHTML = '';
   const uncat = document.createElement('div');
-  uncat.className = 'popup-opt uncat';
-  uncat.textContent = '📦 Uncategorized';
-  uncat.onclick = () => { delete noteFolder[activeNote.id]; saveNoteFolder(); renderNotesList(); closePopup('movePopup'); toast('Moved to Uncategorized') };
+  uncat.className = 'popup-opt uncat'; uncat.textContent = '📦 Uncategorized';
+  uncat.onclick = () => { delete noteFolder[activeNote.id]; saveConfig(); renderNotesList(); closePopup('movePopup'); toast('Moved to Uncategorized') };
   list.appendChild(uncat);
   folders.forEach(f => {
-    const opt = document.createElement('div');
-    opt.className = 'popup-opt';
-    opt.textContent = '📁 ' + f.name;
-    opt.onclick = () => { noteFolder[activeNote.id] = f.name; saveNoteFolder(); renderNotesList(); closePopup('movePopup'); toast('Moved to ' + f.name) };
+    const opt = document.createElement('div'); opt.className = 'popup-opt'; opt.textContent = '📁 ' + f.name;
+    opt.onclick = () => { noteFolder[activeNote.id] = f.name; saveConfig(); renderNotesList(); closePopup('movePopup'); toast('Moved to ' + f.name) };
     list.appendChild(opt);
   });
   if (!folders.length) { const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'Create folders first'; list.appendChild(em) }
@@ -288,10 +316,9 @@ async function loadFilesSidebar() {
     const list = document.getElementById('filesList');
     list.innerHTML = '';
     if (data) {
-      const items = data.filter(f => f.name !== '.keep');
+      const items = data.filter(f => f.name !== '.keep' && f.name !== CONFIG_PATH);
       items.forEach(f => {
-        const div = document.createElement('div');
-        div.className = 'note-item';
+        const div = document.createElement('div'); div.className = 'note-item';
         div.innerHTML = '<div class="note-title">' + fileIcon(f.name) + ' ' + esc(f.name) + '</div>';
         div.onclick = () => switchTab('files');
         list.appendChild(div);
@@ -306,14 +333,14 @@ async function renderFilesGrid() {
     const { data } = await sb.storage.from('files').list('');
     const grid = document.getElementById('filesGrid');
     grid.innerHTML = '';
-    if (!data || !data.filter(f => f.name !== '.keep').length) {
+    const items = (data || []).filter(f => f.name !== '.keep' && f.name !== CONFIG_PATH);
+    if (!items.length) {
       grid.innerHTML = '<div class="empty-msg" style="padding:40px;text-align:center">No files yet. Click UPLOAD to add files.</div>';
       return;
     }
-    data.filter(f => f.name !== '.keep').forEach(f => {
-      const card = document.createElement('div');
-      card.className = 'file-card';
-      card.innerHTML = `<div class="fc-info"><span class="fc-icon">${fileIcon(f.name)}</span><div class="fc-details"><div class="fc-name">${esc(f.name)}</div><div class="fc-meta">${f.metadata ? fmtSize(f.metadata.size) : ''}</div></div></div><div class="fc-acts"><button class="fc-btn" onclick="previewFile('${esc(f.name)}')">VIEW</button><button class="fc-btn danger" onclick="deleteFile('${esc(f.name)}')">DEL</button></div>`;
+    items.forEach(f => {
+      const card = document.createElement('div'); card.className = 'file-card';
+      card.innerHTML = '<div class="fc-info"><span class="fc-icon">' + fileIcon(f.name) + '</span><div class="fc-details"><div class="fc-name">' + esc(f.name) + '</div><div class="fc-meta">' + (f.metadata ? fmtSize(f.metadata.size) : '') + '</div></div></div><div class="fc-acts"><button class="fc-btn" onclick="previewFile(\'' + esc(f.name) + '\')">VIEW</button><button class="fc-btn danger" onclick="deleteFile(\'' + esc(f.name) + '\')">DEL</button></div>';
       grid.appendChild(card);
     });
   } catch (e) { console.error(e) }
@@ -385,8 +412,7 @@ function closePopup(id) { document.getElementById(id).classList.remove('active')
 function showInput(title, placeholder, btnText, onOk, defaultVal) {
   document.getElementById('popupTitle').textContent = title;
   const inp = document.getElementById('popupInput');
-  inp.placeholder = placeholder;
-  inp.value = defaultVal || '';
+  inp.placeholder = placeholder; inp.value = defaultVal || '';
   const okBtn = document.getElementById('popupOk');
   okBtn.textContent = btnText;
   document.getElementById('inputPopup').classList.add('active');
