@@ -11,34 +11,52 @@
   <link rel="stylesheet" href="style.css">
 </head>
 
-<body ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
-  <div id="loader">
-    <div class="spin"></div><span>PERSONAL VAULT</span>
-  </div>
-  <div id="toast"><i id="ti"></i><span id="tm"></span></div>
+<body>
 
-  <!-- AUTH -->
-  <div id="auth">
-    <div class="auth-card">
-      <h1>Personal Vault</h1>
-      <div class="sub">Secure · Private · Yours</div>
-      <input type="email" id="em" placeholder="Email">
-      <input type="password" id="pw" placeholder="Password" onkeydown="if(event.key==='Enter')login()">
-      <button class="btn" id="lbtn" onclick="login()">SIGN IN</button>
-      <div class="auth-err" id="aerr"></div>
+  <!-- LOADER -->
+  <div id="loader"
+    style="position:fixed;inset:0;background:#09090b;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;transition:opacity .4s">
+    <div
+      style="width:24px;height:24px;border:2px solid #27272e;border-top-color:#5b8def;border-radius:50%;animation:spin .6s infinite linear">
+    </div>
+    <span
+      style="font-size:.65rem;color:#5a5a6e;letter-spacing:2px;font-weight:600;font-family:Inter,system-ui,sans-serif">PERSONAL
+      VAULT</span>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast"
+    style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:#1c1c21;border:1px solid #27272e;padding:10px 18px;border-radius:10px;color:#e4e4ec;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;transition:.3s cubic-bezier(.16,1,.3,1);z-index:5000;font-size:.82rem;white-space:nowrap;font-family:Inter,system-ui,sans-serif">
+    <i id="ti"></i><span id="tm"></span>
+  </div>
+
+  <!-- AUTH SCREEN - fully inline styled for reliability -->
+  <div id="auth"
+    style="position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;z-index:1000;display:flex;align-items:center;justify-content:center;background:#000;font-family:Inter,system-ui,sans-serif">
+    <div
+      style="width:400px;max-width:90vw;padding:48px 40px;border:1px solid #27272e;border-radius:16px;background:linear-gradient(145deg,rgba(21,21,24,.95),rgba(12,12,15,.98));backdrop-filter:blur(20px);text-align:center">
+      <h1 style="font-size:1.8rem;font-weight:800;letter-spacing:-1px;margin:0 0 2px;color:#e4e4ec">Personal Vault</h1>
+      <div style="font-size:.72rem;color:#5a5a6e;letter-spacing:2px;text-transform:uppercase;margin-bottom:32px">Secure
+        · Private · Yours</div>
+      <input type="email" id="em" placeholder="Email"
+        style="width:100%;padding:13px 16px;background:#09090b;border:1.5px solid #27272e;border-radius:10px;color:#e4e4ec;font-size:.88rem;margin-bottom:12px;outline:none;font-family:Inter,system-ui,sans-serif;box-sizing:border-box">
+      <input type="password" id="pw" placeholder="Password" onkeydown="if(event.key==='Enter')login()"
+        style="width:100%;padding:13px 16px;background:#09090b;border:1.5px solid #27272e;border-radius:10px;color:#e4e4ec;font-size:.88rem;margin-bottom:12px;outline:none;font-family:Inter,system-ui,sans-serif;box-sizing:border-box">
+      <button id="lbtn" onclick="login()"
+        style="width:100%;padding:13px;background:#5b8def;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;letter-spacing:.3px;margin-top:4px;font-family:Inter,system-ui,sans-serif">SIGN
+        IN</button>
+      <div id="aerr" style="color:#e5484d;font-size:.76rem;margin-top:10px;min-height:18px"></div>
     </div>
   </div>
 
   <!-- APP -->
-  <div id="app">
+  <div id="app" style="width:100%;height:100vh;display:none;flex-direction:row">
     <aside id="side">
-      <!-- Tabs -->
       <div class="side-tabs">
         <div class="side-tab on" id="tab-notes" onclick="switchTab('notes')">NOTES</div>
         <div class="side-tab" id="tab-files" onclick="switchTab('files')">FILES</div>
       </div>
 
-      <!-- Notes panel -->
       <div id="panel-notes">
         <div class="side-actions">
           <button class="act-btn act-new" onclick="createNote()"><i class="ri-add-line"></i>NEW NOTE</button>
@@ -48,7 +66,6 @@
         <div class="side-list" id="sidebar-notes"></div>
       </div>
 
-      <!-- Files panel -->
       <div id="panel-files" class="hide">
         <div class="side-actions">
           <button class="act-btn act-new" onclick="document.getElementById('fup').click()"><i
@@ -60,7 +77,6 @@
         <div class="side-list" id="sidebar-files"></div>
       </div>
 
-      <!-- Bottom -->
       <div class="side-bottom">
         <div class="sb-item" onclick="openGrammar()"><i class="ri-quill-pen-line"></i>Grammar Check</div>
         <div class="sb-item" onclick="showTrash()"><i class="ri-delete-bin-5-line"></i>Trash<span class="cnt hide"
@@ -74,7 +90,7 @@
     </aside>
 
     <main id="main">
-      <!-- EDITOR (default view) -->
+      <!-- EDITOR -->
       <div id="editor-wrap">
         <div id="lock-wall" class="lock-wall hide">
           <i class="ri-lock-2-fill"></i>
@@ -104,14 +120,14 @@
         </div>
       </div>
 
-      <!-- DRIVE VIEW -->
-      <div id="view-drive" class="hide" style="display:flex;flex-direction:column;height:100%">
+      <!-- DRIVE -->
+      <div id="view-drive" class="hide" style="flex-direction:column;height:100%">
         <div class="topbar">
-          <div class="tb-l"><i class="ri-home-5-fill" onclick="drivePath='/';refreshDrive()"></i><span>/</span><span
-              class="p" id="dp">Home</span></div>
+          <div class="tb-l"><i class="ri-home-5-fill" onclick="drivePath='/';refreshDrive()"
+              style="cursor:pointer"></i><span>/</span><span class="p" id="dp">Home</span></div>
           <div class="tb-r">
-            <div class="ib" onclick="setDriveView('grid',this)"><i class="ri-layout-grid-fill"></i></div>
-            <div class="ib" onclick="setDriveView('list',this)"><i class="ri-list-check"></i></div>
+            <div class="ib" onclick="setDriveView('grid')"><i class="ri-layout-grid-fill"></i></div>
+            <div class="ib" onclick="setDriveView('list')"><i class="ri-list-check"></i></div>
             <select class="sel" onchange="driveSortBy=this.value;refreshDriveGrid()">
               <option value="name">Name</option>
               <option value="date">Date</option>
@@ -121,16 +137,16 @@
         </div>
         <div class="drive-area" style="position:relative">
           <div id="dgrid" class="dg"></div>
-          <div class="drop-ov"><i class="ri-upload-cloud-2-line" style="font-size:2rem"></i>Drop files here</div>
+          <div class="drop-ov"><i class="ri-upload-cloud-2-line" style="font-size:2rem"></i> Drop files here</div>
         </div>
       </div>
 
-      <!-- TRASH VIEW -->
-      <div id="view-trash" class="hide" style="display:flex;flex-direction:column;height:100%">
+      <!-- TRASH -->
+      <div id="view-trash" class="hide" style="flex-direction:column;height:100%">
         <div class="topbar">
           <div class="tb-l"><i class="ri-delete-bin-5-line"></i><span class="p">Trash</span></div>
           <div class="tb-r">
-            <div class="ib" onclick="emptyTrash()" style="color:var(--red)"><i
+            <div class="ib" onclick="emptyTrash()" style="color:#e5484d"><i
                 class="ri-delete-bin-fill"></i><span>Empty</span></div>
           </div>
         </div>
@@ -141,6 +157,13 @@
 
   <div id="ctx" class="hide"></div>
   <div id="modal-root"></div>
+  <style>
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+  </style>
   <script src="app.js"></script>
 </body>
 
