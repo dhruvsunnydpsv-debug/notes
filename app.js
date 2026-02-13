@@ -1,11 +1,12 @@
 /* ═══════════════════════════════════════════
    Personal Vault — app.js
-   Password-only login · Cloud-synced folders
+   Real AI · Search · Cloud Folders · Shortcuts
    ═══════════════════════════════════════════ */
 
 const SB_URL = 'https://psukmzzuhpprfoanvjat.supabase.co';
 const SB_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304';
 const AUTH_EMAIL = 'dhruv12306@outlook.com';
+const CONFIG_PATH = '.vault_config.json';
 
 let sb;
 try { sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true } }) }
@@ -20,6 +21,8 @@ let curTab = 'notes';
 let folders = [];
 let noteFolder = {};
 let currentUser = null;
+let geminiKey = '';
+let searchQuery = '';
 
 /* ── INIT ── */
 document.addEventListener('DOMContentLoaded', async () => {
@@ -28,6 +31,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await sb.auth.getSession();
     if (session && session.user) startApp(session.user);
   } catch (e) { console.error('Init:', e) }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); if (currentUser) newNote() }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); if (activeNote) saveNote() }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); const si = document.getElementById('searchInput'); if (si) { si.focus(); si.select() } }
+    if (e.key === 'Escape') { closePopup('movePopup'); closePopup('inputPopup'); closePopup('settingsPopup') }
+  });
 });
 
 /* ══════════════════════════════════
@@ -58,11 +69,8 @@ function startApp(user) {
 }
 
 /* ══════════════════════════════════
-   CLOUD CONFIG (folders sync)
-   Stored as .vault_config.json in Supabase storage
+   CLOUD CONFIG
    ══════════════════════════════════ */
-const CONFIG_PATH = '.vault_config.json';
-
 async function loadConfig() {
   try {
     const { data } = await sb.storage.from('files').download(CONFIG_PATH);
@@ -71,30 +79,29 @@ async function loadConfig() {
       const cfg = JSON.parse(text);
       folders = cfg.folders || [];
       noteFolder = cfg.noteFolder || {};
+      geminiKey = cfg.geminiKey || '';
     }
   } catch (e) {
-    // Config doesn't exist yet — use localStorage fallback for migration
     folders = JSON.parse(localStorage.getItem('pv_folders') || '[]');
     noteFolder = JSON.parse(localStorage.getItem('pv_notefolder') || '{}');
-    // Save to cloud immediately
+    geminiKey = localStorage.getItem('pv_geminikey') || '';
     saveConfigNow();
   }
 }
 
 function saveConfig() {
-  // Debounce saves to avoid hammering storage
   if (configTimer) clearTimeout(configTimer);
   configTimer = setTimeout(saveConfigNow, 500);
 }
 
 async function saveConfigNow() {
   try {
-    const blob = new Blob([JSON.stringify({ folders, noteFolder })], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ folders, noteFolder, geminiKey })], { type: 'application/json' });
     await sb.storage.from('files').upload(CONFIG_PATH, blob, { upsert: true });
-  } catch (e) { console.error('Config save error:', e) }
-  // Also keep localStorage as local cache
+  } catch (e) { console.error('Config save:', e) }
   localStorage.setItem('pv_folders', JSON.stringify(folders));
   localStorage.setItem('pv_notefolder', JSON.stringify(noteFolder));
+  localStorage.setItem('pv_geminikey', geminiKey);
 }
 
 /* ══════════════════════════════════
@@ -110,6 +117,19 @@ function switchTab(tab) {
   document.getElementById('noteEditor').style.display = tab === 'notes' && activeNote ? 'flex' : 'none';
   document.getElementById('filesView').style.display = tab === 'files' ? 'flex' : 'none';
   if (tab === 'files') renderFilesGrid();
+}
+
+/* ══════════════════════════════════
+   SEARCH
+   ══════════════════════════════════ */
+function searchNotes(q) {
+  searchQuery = q.toLowerCase().trim();
+  renderNotesList();
+}
+
+function matchesSearch(n) {
+  if (!searchQuery) return true;
+  return (n.title || '').toLowerCase().includes(searchQuery) || (n.content || '').toLowerCase().includes(searchQuery);
 }
 
 /* ══════════════════════════════════
@@ -130,14 +150,15 @@ function renderNotesList() {
 
   folders.forEach((f, fi) => {
     const isOpen = f.open !== false;
-    const fNotes = notes.filter(n => noteFolder[n.id] === f.name);
+    const fNotes = notes.filter(n => noteFolder[n.id] === f.name && matchesSearch(n));
     const section = document.createElement('div');
     section.className = 'folder-section';
 
     const head = document.createElement('div');
     head.className = 'folder-head' + (isOpen ? '' : ' collapsed');
-    head.innerHTML = '<div class="folder-left"><span class="folder-arrow">▼</span><span class="folder-name">📁 ' + esc(f.name) + '</span></div><div class="folder-acts"><button class="folder-act" onclick="event.stopPropagation();renameFolder(' + fi + ')">✎</button><button class="folder-act" onclick="event.stopPropagation();deleteFolder(' + fi + ')">✕</button></div>';
+    head.innerHTML = '<div class="folder-left"><span class="folder-arrow">▼</span><span class="folder-name">📁 ' + esc(f.name) + '</span><span class="folder-count">' + fNotes.length + '</span></div><div class="folder-acts"><button class="folder-act" onclick="event.stopPropagation();renameFolder(' + fi + ')">✎</button><button class="folder-act danger" onclick="event.stopPropagation();deleteFolder(' + fi + ')">✕</button></div>';
     head.onclick = () => { folders[fi].open = !isOpen; saveConfig(); renderNotesList() };
+    // Drag over folder
     head.ondragover = e => { e.preventDefault(); head.classList.add('drag-over') };
     head.ondragleave = () => head.classList.remove('drag-over');
     head.ondrop = e => { e.preventDefault(); head.classList.remove('drag-over'); const id = e.dataTransfer.getData('noteId'); if (id) { noteFolder[id] = f.name; saveConfig(); renderNotesList(); toast('Moved to ' + f.name) } };
@@ -146,21 +167,28 @@ function renderNotesList() {
     const wrap = document.createElement('div');
     wrap.className = 'folder-notes' + (isOpen ? '' : ' collapsed');
     fNotes.forEach(n => wrap.appendChild(makeNoteItem(n)));
-    if (!fNotes.length) { const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'Empty'; wrap.appendChild(em) }
+    if (!fNotes.length && !searchQuery) { const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'Empty folder'; wrap.appendChild(em) }
     section.appendChild(wrap);
     list.appendChild(section);
   });
 
-  const uncatNotes = notes.filter(n => !noteFolder[n.id] || !folders.find(f => f.name === noteFolder[n.id]));
-  if (uncatNotes.length || !folders.length) {
+  // Uncategorized
+  const uncatNotes = notes.filter(n => (!noteFolder[n.id] || !folders.find(f => f.name === noteFolder[n.id])) && matchesSearch(n));
+  if (uncatNotes.length || (!folders.length && !searchQuery)) {
     const us = document.createElement('div'); us.className = 'uncat-section';
     if (folders.length) { const uh = document.createElement('div'); uh.className = 'uncat-head'; uh.textContent = 'Uncategorized'; us.appendChild(uh) }
     us.ondragover = e => { e.preventDefault(); us.classList.add('drag-over') };
     us.ondragleave = () => us.classList.remove('drag-over');
     us.ondrop = e => { e.preventDefault(); us.classList.remove('drag-over'); const id = e.dataTransfer.getData('noteId'); if (id) { delete noteFolder[id]; saveConfig(); renderNotesList(); toast('Moved to Uncategorized') } };
     uncatNotes.forEach(n => us.appendChild(makeNoteItem(n)));
-    if (!uncatNotes.length && !folders.length) { const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'No notes yet. Click + NEW NOTE.'; us.appendChild(em) }
+    if (!uncatNotes.length && !folders.length) { const em = document.createElement('div'); em.className = 'empty-msg'; em.textContent = 'No notes yet. Click + NOTE to start.'; us.appendChild(em) }
     list.appendChild(us);
+  }
+
+  // No search results
+  if (searchQuery) {
+    const total = notes.filter(matchesSearch).length;
+    if (!total) { list.innerHTML = '<div class="empty-msg">No notes matching "' + esc(searchQuery) + '"</div>' }
   }
 }
 
@@ -168,11 +196,41 @@ function makeNoteItem(n) {
   const div = document.createElement('div');
   div.className = 'note-item' + (activeNote && activeNote.id === n.id ? ' active' : '');
   div.draggable = true;
-  div.innerHTML = '<div class="note-title">' + esc(n.title || 'Untitled') + '</div>';
+
+  const info = document.createElement('div');
+  info.className = 'note-info';
+  info.innerHTML = '<div class="note-title">' + esc(n.title || 'Untitled') + '</div><div class="note-date">' + timeAgo(n.created_at) + '</div>';
+
+  const acts = document.createElement('div');
+  acts.className = 'note-acts';
+  // Move button
+  const moveBtn = document.createElement('button');
+  moveBtn.className = 'note-act'; moveBtn.innerHTML = '📁'; moveBtn.title = 'Move to folder';
+  moveBtn.onclick = e => { e.stopPropagation(); activeNote = n; showMovePopup() };
+  // Delete button
+  const delBtn = document.createElement('button');
+  delBtn.className = 'note-act danger'; delBtn.innerHTML = '🗑'; delBtn.title = 'Delete note';
+  delBtn.onclick = e => { e.stopPropagation(); deleteNote(n.id) };
+  acts.appendChild(moveBtn);
+  acts.appendChild(delBtn);
+
+  div.appendChild(info);
+  div.appendChild(acts);
+
   div.onclick = () => openNote(n.id);
   div.ondragstart = e => { e.dataTransfer.setData('noteId', n.id); div.classList.add('dragging') };
   div.ondragend = () => div.classList.remove('dragging');
   return div;
+}
+
+function timeAgo(d) {
+  if (!d) return '';
+  const s = Math.floor((Date.now() - new Date(d)) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 604800) return Math.floor(s / 86400) + 'd ago';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 async function newNote() {
@@ -204,14 +262,15 @@ function openNote(id) {
 }
 
 function handleBodyInput(ta) {
-  if (ta.value.endsWith('aistart')) { ta.value = ta.value.slice(0, -7); runAI(ta.value); return }
+  if (ta.value.endsWith('aistart')) { ta.value = ta.value.slice(0, -7); triggerAI(); return }
   autoSave();
 }
 
 function autoSave() {
-  document.getElementById('editorFoot').textContent = 'Saving...';
+  document.getElementById('footStatus').textContent = 'Saving...';
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(saveNote, 800);
+  updateStats();
 }
 
 async function saveNote() {
@@ -221,33 +280,51 @@ async function saveNote() {
   try {
     await sb.from('notes').update({ title, content }).eq('id', activeNote.id);
     activeNote.title = title; activeNote.content = content;
-    updateFooter(); renderNotesList();
-  } catch (e) { document.getElementById('editorFoot').textContent = 'Error saving'; console.error(e) }
+    document.getElementById('footStatus').textContent = 'Saved ✓';
+    renderNotesList();
+  } catch (e) { document.getElementById('footStatus').textContent = 'Error'; console.error(e) }
+}
+
+function updateStats() {
+  const body = document.getElementById('noteBody').value;
+  const w = body.trim() ? body.trim().split(/\s+/).length : 0;
+  document.getElementById('footStats').textContent = w + ' words · ' + body.length + ' chars';
 }
 
 function updateFooter() {
-  const body = document.getElementById('noteBody').value;
-  const w = body.trim() ? body.trim().split(/\s+/).length : 0;
-  document.getElementById('editorFoot').textContent = w + ' words · ' + body.length + ' chars · Saved';
+  updateStats();
+  document.getElementById('footStatus').textContent = 'Saved ✓';
 }
 
 async function deleteActiveNote() {
   if (!activeNote) return;
-  if (!confirm('Delete this note?')) return;
+  if (!confirm('Delete "' + (activeNote.title || 'Untitled') + '"?')) return;
+  await performDelete(activeNote.id);
+}
+
+async function deleteNote(id) {
+  const n = notes.find(x => x.id === id);
+  if (!confirm('Delete "' + (n ? n.title || 'Untitled' : 'this note') + '"?')) return;
+  await performDelete(id);
+}
+
+async function performDelete(id) {
   try {
-    await sb.from('notes').delete().eq('id', activeNote.id);
-    notes = notes.filter(n => n.id !== activeNote.id);
-    delete noteFolder[activeNote.id]; saveConfig();
-    activeNote = null;
-    document.getElementById('noteEditor').style.display = 'none';
-    document.getElementById('emptyState').style.display = 'flex';
-    renderNotesList(); toast('Deleted');
+    await sb.from('notes').delete().eq('id', id);
+    notes = notes.filter(n => n.id !== id);
+    delete noteFolder[id]; saveConfig();
+    if (activeNote && activeNote.id === id) {
+      activeNote = null;
+      document.getElementById('noteEditor').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'flex';
+    }
+    renderNotesList(); toast('Note deleted');
   } catch (e) { toast('Error'); console.error(e) }
 }
 
-/* ── FOLDERS (cloud synced) ── */
+/* ── FOLDERS ── */
 function newFolder() {
-  showInput('New Folder', 'Folder name:', 'CREATE', name => {
+  showInput('New Folder', 'Folder name', 'CREATE', name => {
     if (!name.trim()) return;
     if (folders.find(f => f.name === name.trim())) { toast('Already exists'); return }
     folders.push({ name: name.trim(), open: true });
@@ -256,7 +333,7 @@ function newFolder() {
 }
 
 function renameFolder(idx) {
-  showInput('Rename Folder', 'New name:', 'RENAME', name => {
+  showInput('Rename Folder', 'New name', 'RENAME', name => {
     if (!name.trim()) return;
     const oldName = folders[idx].name;
     folders[idx].name = name.trim();
@@ -266,14 +343,14 @@ function renameFolder(idx) {
 }
 
 function deleteFolder(idx) {
-  if (!confirm('Delete folder "' + folders[idx].name + '"?')) return;
+  if (!confirm('Delete folder "' + folders[idx].name + '"? Notes will be moved to Uncategorized.')) return;
   const name = folders[idx].name;
   folders.splice(idx, 1);
   Object.keys(noteFolder).forEach(k => { if (noteFolder[k] === name) delete noteFolder[k] });
   saveConfig(); renderNotesList(); toast('Folder deleted');
 }
 
-/* ── MOVE TO FOLDER ── */
+/* ── MOVE POPUP ── */
 function showMovePopup() {
   if (!activeNote) return;
   const list = document.getElementById('moveList');
@@ -291,52 +368,90 @@ function showMovePopup() {
   document.getElementById('movePopup').classList.add('active');
 }
 
-/* ── AI HUMANIZER ── */
-async function runAI(text) {
+/* ══════════════════════════════════
+   AI HUMANIZER (Gemini API + fallback)
+   ══════════════════════════════════ */
+async function triggerAI() {
+  if (!activeNote) { toast('Open a note first'); return }
+  const text = document.getElementById('noteBody').value;
   if (!text.trim()) { toast('Write something first'); return }
-  document.getElementById('editorFoot').textContent = 'AI Working...';
-  toast('AI refining your text... ✨');
-  await new Promise(r => setTimeout(r, 600));
-  const result = humanize(text);
-  document.getElementById('noteBody').value = result;
-  autoSave();
-  const changes = countDiffs(text, result);
-  toast(changes > 0 ? changes + ' improvements made! ✨' : 'Text looks good already!');
+
+  // Show loading
+  document.getElementById('aiLoading').classList.add('active');
+  document.getElementById('footStatus').textContent = 'AI Working...';
+
+  try {
+    let result;
+    if (geminiKey) {
+      // Use real Gemini AI
+      result = await callGemini(text);
+    } else {
+      // Fallback to local humanizer
+      await new Promise(r => setTimeout(r, 600));
+      result = humanize(text);
+    }
+    document.getElementById('noteBody').value = result;
+    autoSave();
+    toast(geminiKey ? 'AI rewrite complete! ✨' : 'Text improved! (Add Gemini key in ⚙ for real AI)');
+  } catch (e) {
+    console.error('AI error:', e);
+    toast('AI error: ' + e.message);
+  } finally {
+    document.getElementById('aiLoading').classList.remove('active');
+  }
 }
-function countDiffs(a, b) { const wa = a.split(/\s+/), wb = b.split(/\s+/); let d = 0; for (let i = 0; i < Math.max(wa.length, wb.length); i++) { if (wa[i] !== wb[i]) d++ } return d }
+
+async function callGemini(text) {
+  const prompt = 'You are an expert editor. Rewrite the following text to sound more natural, human-written, and polished. Improve vocabulary, sentence structure, flow, and clarity. Remove filler words and redundancies. Keep the same meaning and tone. Return ONLY the rewritten text, nothing else:\n\n' + text;
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + geminiKey, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'API error ' + res.status);
+  }
+  const data = await res.json();
+  if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+    return data.candidates[0].content.parts[0].text;
+  }
+  throw new Error('No response from AI');
+}
+
 function humanize(t) {
-  // Fix spacing
   t = t.replace(/ {2,}/g, ' ');
   t = t.replace(/\n{3,}/g, '\n\n');
-
-  // Fix common typos/misspellings
-  const typos = [[/\bteh\b/g, 'the'], [/\brecieve\b/gi, 'receive'], [/\bseperate\b/gi, 'separate'], [/\bdefinately\b/gi, 'definitely'], [/\boccured\b/gi, 'occurred'], [/\buntill?\b/gi, 'until'], [/\balot\b/gi, 'a lot'], [/\bcould of\b/gi, 'could have'], [/\bshould of\b/gi, 'should have'], [/\bwould of\b/gi, 'would have'], [/\btheir is\b/gi, 'there is'], [/\btheir are\b/gi, 'there are'], [/\byour welcome\b/gi, 'you\'re welcome'], [/\bits a\b/g, 'it\'s a'], [/\bdont\b/g, 'don\'t'], [/\bcant\b/g, 'can\'t'], [/\bwont\b/g, 'won\'t'], [/\bdidnt\b/g, 'didn\'t'], [/\bisnt\b/g, 'isn\'t'], [/\barent\b/g, 'aren\'t'], [/\bcouldnt\b/g, 'couldn\'t'], [/\bshouldnt\b/g, 'shouldn\'t'], [/\bwouldnt\b/g, 'wouldn\'t'], [/\bthats\b/g, 'that\'s'], [/\bwhats\b/g, 'what\'s'], [/\bheres\b/g, 'here\'s'], [/\btheres\b/g, 'there\'s']];
-  typos.forEach(([p, v]) => { t = t.replace(p, v) });
-
-  // Upgrade weak vocabulary
-  const upgrades = [[/\bvery good\b/gi, 'excellent'], [/\bvery bad\b/gi, 'terrible'], [/\bvery big\b/gi, 'enormous'], [/\bvery small\b/gi, 'tiny'], [/\bvery happy\b/gi, 'thrilled'], [/\bvery sad\b/gi, 'devastated'], [/\bvery tired\b/gi, 'exhausted'], [/\bvery scared\b/gi, 'terrified'], [/\bvery angry\b/gi, 'furious'], [/\bvery important\b/gi, 'crucial'], [/\bvery easy\b/gi, 'effortless'], [/\bvery hard\b/gi, 'challenging'], [/\bvery fast\b/gi, 'rapid'], [/\bvery slow\b/gi, 'sluggish'], [/\bvery old\b/gi, 'ancient'], [/\bvery new\b/gi, 'brand-new'], [/\bvery nice\b/gi, 'delightful'], [/\bvery boring\b/gi, 'tedious'], [/\bvery interesting\b/gi, 'fascinating'], [/\bvery pretty\b/gi, 'gorgeous'], [/\bvery ugly\b/gi, 'hideous'], [/\bvery cold\b/gi, 'freezing'], [/\bvery hot\b/gi, 'scorching'], [/\bvery hungry\b/gi, 'starving'], [/\bvery quiet\b/gi, 'silent'], [/\bvery loud\b/gi, 'deafening'], [/\bvery rich\b/gi, 'wealthy'], [/\bvery poor\b/gi, 'impoverished'], [/\bvery simple\b/gi, 'straightforward'], [/\bvery difficult\b/gi, 'arduous'], [/\bvery strong\b/gi, 'powerful'], [/\bvery weak\b/gi, 'feeble'], [/\bvery bright\b/gi, 'brilliant'], [/\bvery dark\b/gi, 'pitch-black'], [/\bvery clean\b/gi, 'spotless'], [/\bvery dirty\b/gi, 'filthy']];
-  upgrades.forEach(([p, v]) => { t = t.replace(p, v) });
-
-  // Remove filler phrases
-  const fillers = [[/\bbasically,?\s*/gi, ''], [/\bliterally\s+/gi, ''], [/\bactually,?\s*/gi, ''], [/\bhonestly,?\s*/gi, ''], [/\bjust\s+/gi, ''], [/\breally\s+/gi, ''], [/\bsort of\s+/gi, ''], [/\bkind of\s+/gi, 'somewhat '], [/\byou know,?\s*/gi, ''], [/\blike,\s+/gi, ''], [/\bI mean,?\s*/gi, '']];
-  fillers.forEach(([p, v]) => { t = t.replace(p, v) });
-
-  // Improve wordy phrases
-  const wordy = [[/\bin order to\b/gi, 'to'], [/\bdue to the fact that\b/gi, 'because'], [/\bat this point in time\b/gi, 'now'], [/\bin the event that\b/gi, 'if'], [/\bfor the purpose of\b/gi, 'to'], [/\bin spite of the fact that\b/gi, 'although'], [/\bwith regard to\b/gi, 'regarding'], [/\bin the near future\b/gi, 'soon'], [/\ba large number of\b/gi, 'many'], [/\ba lot of\b/gi, 'many'], [/\bgave an explanation\b/gi, 'explained'], [/\bmade a decision\b/gi, 'decided'], [/\btook into consideration\b/gi, 'considered'], [/\bhad a discussion\b/gi, 'discussed'], [/\bis able to\b/gi, 'can'], [/\bhas the ability to\b/gi, 'can'], [/\bin my opinion,?\s*/gi, ''], [/\bi think\b/gi, 'I believe'], [/\bi feel like\b/gi, 'I sense that'], [/\bat the end of the day\b/gi, 'ultimately'], [/\bneedless to say\b/gi, 'clearly'], [/\bit goes without saying\b/gi, 'clearly'], [/\bthe fact that\b/gi, 'that'], [/\bin today's world\b/gi, 'today'], [/\beach and every\b/gi, 'every'], [/\bfirst and foremost\b/gi, 'first']];
-  wordy.forEach(([p, v]) => { t = t.replace(p, v) });
-
-  // Capitalize after sentence endings
+  // Typos
+  [[/\bteh\b/g, 'the'], [/\brecieve\b/gi, 'receive'], [/\bseperate\b/gi, 'separate'], [/\bdefinately\b/gi, 'definitely'], [/\boccured\b/gi, 'occurred'], [/\buntill?\b/gi, 'until'], [/\balot\b/gi, 'a lot'], [/\bcould of\b/gi, 'could have'], [/\bshould of\b/gi, 'should have'], [/\bwould of\b/gi, 'would have'], [/\bdont\b/g, "don't"], [/\bcant\b/g, "can't"], [/\bwont\b/g, "won't"], [/\bdidnt\b/g, "didn't"], [/\bisnt\b/g, "isn't"], [/\barent\b/g, "aren't"]].forEach(([p, v]) => { t = t.replace(p, v) });
+  // Vocabulary
+  [[/\bvery good\b/gi, 'excellent'], [/\bvery bad\b/gi, 'terrible'], [/\bvery big\b/gi, 'enormous'], [/\bvery small\b/gi, 'tiny'], [/\bvery happy\b/gi, 'thrilled'], [/\bvery sad\b/gi, 'devastated'], [/\bvery tired\b/gi, 'exhausted'], [/\bvery important\b/gi, 'crucial'], [/\bvery easy\b/gi, 'effortless'], [/\bvery hard\b/gi, 'challenging'], [/\bvery fast\b/gi, 'rapid'], [/\bvery nice\b/gi, 'delightful'], [/\bvery interesting\b/gi, 'fascinating'], [/\bvery scared\b/gi, 'terrified'], [/\bvery angry\b/gi, 'furious']].forEach(([p, v]) => { t = t.replace(p, v) });
+  // Wordy
+  [[/\bin order to\b/gi, 'to'], [/\bdue to the fact that\b/gi, 'because'], [/\bat this point in time\b/gi, 'now'], [/\bin the event that\b/gi, 'if'], [/\bfor the purpose of\b/gi, 'to'], [/\ba lot of\b/gi, 'many'], [/\bi think\b/gi, 'I believe'], [/\bat the end of the day\b/gi, 'ultimately'], [/\bneedless to say\b/gi, 'clearly'], [/\bthe fact that\b/gi, 'that'], [/\bis able to\b/gi, 'can'], [/\bhas the ability to\b/gi, 'can']].forEach(([p, v]) => { t = t.replace(p, v) });
+  // Fillers
+  [[/\bbasically,?\s*/gi, ''], [/\bliterally\s+/gi, ''], [/\bhonestly,?\s*/gi, ''], [/\bsort of\s+/gi, ''], [/\byou know,?\s*/gi, '']].forEach(([p, v]) => { t = t.replace(p, v) });
+  // Capitalize
   t = t.replace(/(^|[.!?]\s+)([a-z])/g, (m, p, c) => p + c.toUpperCase());
-
-  // Fix double punctuation
   t = t.replace(/([.!?])\1+/g, '$1');
   t = t.replace(/\s+([.!?,;:])/g, '$1');
-
-  // Trim whitespace
   t = t.replace(/^ +| +$/gm, '');
   t = t.replace(/ {2,}/g, ' ');
-
   return t;
+}
+
+/* ══════════════════════════════════
+   SETTINGS
+   ══════════════════════════════════ */
+function showSettings() {
+  document.getElementById('geminiKeyInput').value = geminiKey;
+  document.getElementById('settingsPopup').classList.add('active');
+}
+
+function saveSettings() {
+  geminiKey = document.getElementById('geminiKeyInput').value.trim();
+  saveConfig();
+  closePopup('settingsPopup');
+  toast(geminiKey ? 'Gemini API key saved! AI is ready ✨' : 'API key cleared');
 }
 
 /* ══════════════════════════════════
@@ -351,7 +466,7 @@ async function loadFilesSidebar() {
       const items = data.filter(f => f.name !== '.keep' && f.name !== CONFIG_PATH);
       items.forEach(f => {
         const div = document.createElement('div'); div.className = 'note-item';
-        div.innerHTML = '<div class="note-title">' + fileIcon(f.name) + ' ' + esc(f.name) + '</div>';
+        div.innerHTML = '<div class="note-info"><div class="note-title">' + fileIcon(f.name) + ' ' + esc(f.name) + '</div><div class="note-date">' + (f.metadata ? fmtSize(f.metadata.size) : '') + '</div></div>';
         div.onclick = () => switchTab('files');
         list.appendChild(div);
       });
@@ -367,7 +482,7 @@ async function renderFilesGrid() {
     grid.innerHTML = '';
     const items = (data || []).filter(f => f.name !== '.keep' && f.name !== CONFIG_PATH);
     if (!items.length) {
-      grid.innerHTML = '<div class="empty-msg" style="padding:40px;text-align:center">No files yet. Click UPLOAD to add files.</div>';
+      grid.innerHTML = '<div class="empty-msg" style="padding:40px;text-align:center;grid-column:1/-1">No files yet. Click ⬆ UPLOAD to add files.</div>';
       return;
     }
     items.forEach(f => {
@@ -404,7 +519,7 @@ async function deleteFile(name) {
   if (!confirm('Delete "' + name + '"?')) return;
   try {
     await sb.storage.from('files').remove([name]);
-    loadFilesSidebar(); renderFilesGrid(); toast('Deleted');
+    loadFilesSidebar(); renderFilesGrid(); toast('File deleted');
   } catch (e) { toast('Error'); console.error(e) }
 }
 
@@ -415,6 +530,8 @@ function fileIcon(n) {
   if (/\.(doc|docx|txt)$/i.test(n)) return '📝';
   if (/\.(mp4|mov|avi)$/i.test(n)) return '🎬';
   if (/\.(mp3|wav|flac)$/i.test(n)) return '🎵';
+  if (/\.(xls|xlsx|csv)$/i.test(n)) return '📊';
+  if (/\.(ppt|pptx)$/i.test(n)) return '📽️';
   return '📄';
 }
 function fmtSize(b) {
@@ -425,7 +542,7 @@ function fmtSize(b) {
 }
 
 /* ══════════════════════════════════
-   MOBILE SIDEBAR
+   MOBILE
    ══════════════════════════════════ */
 function openSidebar() {
   document.getElementById('sidebar').classList.add('mobile-open');
@@ -466,5 +583,5 @@ function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('show'), 2500);
+  t._t = setTimeout(() => t.classList.remove('show'), 3000);
 }

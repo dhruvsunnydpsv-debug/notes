@@ -5,22 +5,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
   <title>Personal Vault</title>
-  <meta name="description" content="Personal Vault — Secure notes and file storage by Dhruv Shah">
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <meta name="description" content="Personal Vault — Secure notes and file storage">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-  <!-- LOGIN (password only) -->
+  <!-- LOGIN -->
   <div id="loginScreen" class="screen active">
     <div class="login-wrap">
       <div class="login-card">
+        <div class="login-icon">🔒</div>
         <h1>PERSONAL VAULT</h1>
-        <div class="sub">Your Secure Space</div>
+        <div class="sub">Secure · Private · Yours</div>
         <input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
-        <button class="btn-primary" onclick="doLogin()">SIGN IN</button>
+        <button class="btn-primary" onclick="doLogin()">UNLOCK</button>
         <div class="login-err" id="loginErr"></div>
       </div>
     </div>
@@ -30,29 +32,33 @@
   <div id="appScreen" class="screen">
     <div class="side-overlay" id="sideOverlay" onclick="closeSidebar()"></div>
     <aside class="sidebar" id="sidebar">
-      <!-- Tabs -->
       <div class="sidebar-tabs">
         <button class="tab-btn active" id="tabNotes" onclick="switchTab('notes')">NOTES</button>
         <button class="tab-btn" id="tabFiles" onclick="switchTab('files')">FILES</button>
       </div>
 
-      <!-- Notes tab content -->
+      <!-- Notes tab -->
       <div class="tab-content active" id="tcNotes">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" id="searchInput" placeholder="Search notes..." oninput="searchNotes(this.value)">
+        </div>
         <div class="side-actions">
-          <button class="btn-new" onclick="newNote()">+ NEW NOTE</button>
-          <button class="btn-fold" onclick="newFolder()">+ NEW FOLDER</button>
+          <button class="btn-new" onclick="newNote()">+ NOTE</button>
+          <button class="btn-fold" onclick="newFolder()">+ FOLDER</button>
         </div>
         <div class="side-list" id="notesList"></div>
       </div>
 
-      <!-- Files tab content (just list, no upload here) -->
+      <!-- Files tab -->
       <div class="tab-content" id="tcFiles">
         <div class="side-list" id="filesList"></div>
       </div>
 
-      <!-- Footer: just logout -->
+      <!-- Footer -->
       <div class="side-footer">
         <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
+        <button class="btn-settings" onclick="showSettings()" title="Settings">⚙</button>
       </div>
     </aside>
 
@@ -62,8 +68,14 @@
         <div class="empty-state-head">
           <button class="menu-toggle" onclick="openSidebar()">☰</button>
         </div>
+        <div class="empty-icon">📝</div>
         <h2>Select a note or create a new one</h2>
-        <div class="hint">Tap the menu button (☰) at the top to get started</div>
+        <div class="hint">Use the sidebar to get started</div>
+        <div class="shortcut-hints">
+          <div class="shortcut-hint"><kbd>Ctrl</kbd> + <kbd>N</kbd> New note</div>
+          <div class="shortcut-hint"><kbd>Ctrl</kbd> + <kbd>S</kbd> Save note</div>
+          <div class="shortcut-hint"><kbd>Ctrl</kbd> + <kbd>K</kbd> Search</div>
+        </div>
       </div>
 
       <!-- Note editor -->
@@ -72,21 +84,25 @@
           <button class="menu-toggle" onclick="openSidebar()">☰</button>
           <input class="title-input" id="noteTitle" placeholder="Untitled" oninput="autoSave()">
           <div class="editor-acts">
+            <button class="icon-btn ai" onclick="triggerAI()" title="AI Humanize">✨ AI</button>
             <button class="icon-btn" onclick="showMovePopup()">MOVE</button>
             <button class="icon-btn danger" onclick="deleteActiveNote()">DELETE</button>
           </div>
         </div>
         <textarea class="note-body" id="noteBody" placeholder="Start writing..."
           oninput="handleBodyInput(this)"></textarea>
-        <div class="editor-foot" id="editorFoot">Saved</div>
+        <div class="editor-foot" id="editorFoot">
+          <span id="footStats">0 words · 0 chars</span>
+          <span class="status" id="footStatus">Saved</span>
+        </div>
       </div>
 
-      <!-- Files view (upload button is HERE, in the main area) -->
+      <!-- Files view -->
       <div class="files-view" id="filesView" style="display:none">
         <div class="files-head">
           <button class="menu-toggle" onclick="openSidebar()">☰</button>
           <h2>Your Files</h2>
-          <label class="upload-btn-main" for="fileInput">UPLOAD</label>
+          <label class="upload-btn-main" for="fileInput">⬆ UPLOAD</label>
           <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
         </div>
         <div class="files-grid" id="filesGrid"></div>
@@ -94,7 +110,7 @@
     </main>
   </div>
 
-  <!-- Move-to-folder popup -->
+  <!-- Move popup -->
   <div class="popup-bg" id="movePopup">
     <div class="popup">
       <h3>MOVE TO FOLDER</h3>
@@ -113,6 +129,27 @@
         <button class="popup-ok" id="popupOk">OK</button>
       </div>
     </div>
+  </div>
+
+  <!-- Settings popup -->
+  <div class="popup-bg" id="settingsPopup">
+    <div class="popup">
+      <h3>⚙ SETTINGS</h3>
+      <label>GEMINI API KEY (for AI Humanizer)</label>
+      <input id="geminiKeyInput" placeholder="Paste your Gemini API key" type="password">
+      <div class="popup-hint">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank"
+          style="color:var(--ac)">aistudio.google.com/apikey</a></div>
+      <div class="popup-btns" style="margin-top:16px">
+        <button class="popup-cancel" onclick="closePopup('settingsPopup')">CANCEL</button>
+        <button class="popup-ok" onclick="saveSettings()">SAVE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI loading -->
+  <div class="ai-loading" id="aiLoading">
+    <div class="ai-spinner"></div>
+    <p>AI is rewriting your text...</p>
   </div>
 
   <!-- Upload progress -->
