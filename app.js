@@ -21,7 +21,7 @@ let curTab = 'notes';
 let folders = [];
 let noteFolder = {};
 let currentUser = null;
-let geminiKey = 'AIzaSyA21bmcgzm4f856jRsJNKKT9erTQaE-s_0';
+let geminiKey = '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';
 let searchQuery = '';
 
 /* ── INIT ── */
@@ -416,22 +416,28 @@ Rules you MUST follow:
 9. If the text has technical terms, keep them but explain naturally if needed.
 10. The tone should feel like a smart friend explaining something — confident but not arrogant, clear but not dumbed down.
 
-Return ONLY the rewritten text. No explanations, no "Here's the rewritten version", no quotes around it. Just the clean rewritten text.
-
-Text to rewrite:
-${text}`;
-  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + geminiKey, {
+Return ONLY the rewritten text. No explanations, no "Here's the rewritten version", no quotes around it. Just the clean rewritten text.`;
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + geminiKey
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.0-flash-exp:free',
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content: text }
+      ]
+    })
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error?.message || 'API error ' + res.status);
   }
   const data = await res.json();
-  if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-    return data.candidates[0].content.parts[0].text;
+  if (data.choices && data.choices[0] && data.choices[0].message) {
+    return data.choices[0].message.content;
   }
   throw new Error('No response from AI');
 }
