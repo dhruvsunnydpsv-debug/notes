@@ -9,7 +9,7 @@ const SB_KEY = 'sb_publishable_FLl6k_0aVgH_R7bKNkzsfA_HYTIM304';
 // ─── HARDCODED LOGIN EMAIL (password-only UI) ───
 // The login screen only shows a password field.
 // This email is used behind the scenes with Supabase auth.
-const AUTH_EMAIL = 'dhruvsunnydpsv@gmail.com';
+const AUTH_EMAIL = 'dhruv12306@outlook.com';
 
 let sb;
 try { sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true } }) }
@@ -143,10 +143,7 @@ function makeNoteItem(n) {
 
 async function newNote() {
   try {
-    // Include user_id for RLS policies
-    const insertData = { title: '', content: '' };
-    if (currentUser) insertData.user_id = currentUser.id;
-    const { data, error } = await sb.from('notes').insert([insertData]).select();
+    const { data, error } = await sb.from('notes').insert([{ title: '', content: '' }]).select();
     if (error) throw error;
     if (data && data[0]) { notes.unshift(data[0]); openNote(data[0].id); toast('Note created') }
   } catch (e) { toast('Error: ' + e.message); console.error(e) }
