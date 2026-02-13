@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personal Vault — Notes & Drive</title>
-  <meta name="description" content="Secure personal vault for notes and file storage by Dhruv Shah">
+  <title>Personal Vault</title>
+  <meta name="description" content="Personal Vault — Secure notes and file storage by Dhruv Shah">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <link rel="stylesheet" href="style.css">
@@ -13,138 +13,134 @@
 
 <body ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
   <div id="loader">
-    <div class="spin"></div><span
-      style="font-size:.7rem;color:var(--text3);letter-spacing:1.5px;font-weight:500">PERSONAL VAULT</span>
+    <div class="spin"></div><span>PERSONAL VAULT</span>
   </div>
-  <div id="toast"><i id="t-icon" class="ri-information-line"></i><span id="t-msg"></span></div>
+  <div id="toast"><i id="ti"></i><span id="tm"></span></div>
 
   <!-- AUTH -->
-  <div id="auth-screen">
+  <div id="auth">
     <div class="auth-card">
-      <div class="auth-brand">Personal Vault</div>
-      <div class="auth-sub">by Dhruv Shah</div>
-      <div class="field"><input type="email" id="email" placeholder="Email address"></div>
-      <div class="field"><input type="password" id="pass" placeholder="Password"
-          onkeydown="if(event.key==='Enter')login()"></div>
-      <button id="lbtn" class="btn-main" onclick="login()">Sign In</button>
-      <p id="aerr" class="auth-err"></p>
+      <h1>Personal Vault</h1>
+      <div class="sub">Secure · Private · Yours</div>
+      <input type="email" id="em" placeholder="Email">
+      <input type="password" id="pw" placeholder="Password" onkeydown="if(event.key==='Enter')login()">
+      <button class="btn" id="lbtn" onclick="login()">SIGN IN</button>
+      <div class="auth-err" id="aerr"></div>
     </div>
   </div>
 
   <!-- APP -->
   <div id="app">
-    <nav id="sidebar">
-      <div class="s-brand"><i class="ri-shield-keyhole-fill"></i>Personal Vault</div>
-      <div class="s-label">Workspace</div>
-      <div class="s-item active" data-v="drive" onclick="go('drive')"><i class="ri-hard-drive-2-line"></i>Drive</div>
-      <div class="s-item" data-v="notes" onclick="go('notes')"><i class="ri-file-text-line"></i>Notes</div>
-      <div class="s-label">Tools</div>
-      <div class="s-item" onclick="openGrammar()"><i class="ri-quill-pen-line"></i>Grammar Check</div>
-      <div class="s-item" data-v="trash" onclick="go('trash')"><i class="ri-delete-bin-5-line"></i>Trash<span
-          class="cnt hidden" id="tcnt">0</span></div>
-      <div class="s-foot">
-        <div class="s-toggle" onclick="toggleTheme()"><i id="thIcon" class="ri-sun-line"></i><span id="thLabel">Light
-            Mode</span></div>
-        <div class="s-user">
-          <div class="s-av" id="uav">D</div>
-          <div style="overflow:hidden;flex:1">
-            <div class="s-email" id="uemail">user</div>
-          </div>
-          <button class="s-out" onclick="logout()" title="Sign out"><i class="ri-logout-box-r-line"></i></button>
+    <aside id="side">
+      <!-- Tabs -->
+      <div class="side-tabs">
+        <div class="side-tab on" id="tab-notes" onclick="switchTab('notes')">NOTES</div>
+        <div class="side-tab" id="tab-files" onclick="switchTab('files')">FILES</div>
+      </div>
+
+      <!-- Notes panel -->
+      <div id="panel-notes">
+        <div class="side-actions">
+          <button class="act-btn act-new" onclick="createNote()"><i class="ri-add-line"></i>NEW NOTE</button>
+          <button class="act-btn act-fold" onclick="createNoteFolder()"><i class="ri-folder-add-line"></i>NEW
+            FOLDER</button>
+        </div>
+        <div class="side-list" id="sidebar-notes"></div>
+      </div>
+
+      <!-- Files panel -->
+      <div id="panel-files" class="hide">
+        <div class="side-actions">
+          <button class="act-btn act-new" onclick="document.getElementById('fup').click()"><i
+              class="ri-upload-2-line"></i>UPLOAD FILE</button>
+          <button class="act-btn act-fold" onclick="createDriveFolder()"><i class="ri-folder-add-line"></i>NEW
+            FOLDER</button>
+          <input type="file" id="fup" hidden multiple onchange="uploadFiles(this.files)">
+        </div>
+        <div class="side-list" id="sidebar-files"></div>
+      </div>
+
+      <!-- Bottom -->
+      <div class="side-bottom">
+        <div class="sb-item" onclick="openGrammar()"><i class="ri-quill-pen-line"></i>Grammar Check</div>
+        <div class="sb-item" onclick="showTrash()"><i class="ri-delete-bin-5-line"></i>Trash<span class="cnt hide"
+            id="tcnt">0</span></div>
+        <div class="sb-user">
+          <div class="sb-av" id="uav">D</div>
+          <div class="sb-email" id="uemail">user</div><button class="sb-out" onclick="logout()" title="Sign out"><i
+              class="ri-logout-box-r-line"></i></button>
         </div>
       </div>
-    </nav>
+    </aside>
 
     <main id="main">
-
-      <!-- DRIVE VIEW -->
-      <div id="view-drive" style="display:flex;flex-direction:column;height:100%">
-        <div class="topbar">
-          <div class="tb-left"><i class="ri-home-5-fill" onclick="curPath='/';refreshDrive()"></i><span>/</span><span
-              class="path" id="dpath">Home</span></div>
-          <div class="tb-right">
-            <div class="vbtns"><button class="active" onclick="setView('grid',this)"><i
-                  class="ri-layout-grid-fill"></i></button><button onclick="setView('list',this)"><i
-                  class="ri-list-check"></i></button></div>
-            <select class="sel" onchange="sortBy=this.value;refreshDrive()">
-              <option value="name">Sort: Name</option>
-              <option value="date">Sort: Date</option>
-              <option value="size">Sort: Size</option>
-            </select>
-            <div class="ib" onclick="createFolder()"><i class="ri-folder-add-line"></i><span>Folder</span></div>
-            <div class="ib filled" onclick="document.getElementById('fup').click()"><i
-                class="ri-upload-2-line"></i><span>Upload</span></div>
-            <input type="file" id="fup" hidden multiple onchange="uploadFiles(this.files)">
-          </div>
+      <!-- EDITOR (default view) -->
+      <div id="editor-wrap">
+        <div id="lock-wall" class="lock-wall hide">
+          <i class="ri-lock-2-fill"></i>
+          <h2>This note is locked</h2>
+          <input type="password" id="lockpw" placeholder="Enter password">
+          <button onclick="unlockNote()">Unlock</button>
         </div>
-        <div class="drive-content">
-          <div id="dgrid" class="grid"></div>
-          <div class="drop-overlay"><i class="ri-upload-cloud-2-line" style="font-size:2rem;margin-right:10px"></i>Drop
-            files to upload</div>
+        <div id="e-empty" class="e-empty">
+          <i class="ri-file-text-line"></i>
+          <p>Select a note or create a new one</p>
+          <span>Use the sidebar to get started</span>
+        </div>
+        <div id="e-ui" class="hide" style="display:flex;flex-direction:column;flex:1">
+          <div class="e-bar">
+            <button class="tb" onclick="insertMD('**')" title="Bold"><i class="ri-bold"></i></button>
+            <button class="tb" onclick="insertMD('*')" title="Italic"><i class="ri-italic"></i></button>
+            <button class="tb" onclick="insertMD('`')" title="Code"><i class="ri-code-s-slash-line"></i></button>
+            <button class="tb" onclick="insertMD('~~')" title="Strikethrough"><i class="ri-strikethrough"></i></button>
+            <div class="sep"></div>
+            <button class="tb" id="lockbtn" onclick="toggleLock()" title="Lock"><i
+                class="ri-lock-unlock-line"></i></button>
+            <button class="tb" onclick="toggleFocus()" title="Focus mode"><i class="ri-focus-3-line"></i></button>
+            <div class="e-meta"><span id="wc">0 words</span><span id="ss"><span class="dot"></span>Saved</span></div>
+          </div>
+          <input id="et" placeholder="Untitled" oninput="triggerSave()">
+          <textarea id="eb" placeholder="Start writing..." oninput="handleInput(this)"></textarea>
         </div>
       </div>
 
-      <!-- NOTES VIEW -->
-      <div id="view-notes" class="hidden">
-        <div class="note-sidebar">
-          <div class="ns-head">
-            <div class="ns-top">
-              <h3>📝 Notes</h3>
-              <div class="ib filled" onclick="createNote()" style="font-size:.8rem"><i
-                  class="ri-add-line"></i><span>New</span></div>
-            </div>
-            <input class="ns-search" placeholder="Search notes..." oninput="filterNotes(this.value)">
+      <!-- DRIVE VIEW -->
+      <div id="view-drive" class="hide" style="display:flex;flex-direction:column;height:100%">
+        <div class="topbar">
+          <div class="tb-l"><i class="ri-home-5-fill" onclick="drivePath='/';refreshDrive()"></i><span>/</span><span
+              class="p" id="dp">Home</span></div>
+          <div class="tb-r">
+            <div class="ib" onclick="setDriveView('grid',this)"><i class="ri-layout-grid-fill"></i></div>
+            <div class="ib" onclick="setDriveView('list',this)"><i class="ri-list-check"></i></div>
+            <select class="sel" onchange="driveSortBy=this.value;refreshDriveGrid()">
+              <option value="name">Name</option>
+              <option value="date">Date</option>
+              <option value="size">Size</option>
+            </select>
           </div>
-          <div class="ftabs" id="ftabs"></div>
-          <div id="nlist"></div>
         </div>
-        <div class="editor" id="editor">
-          <div id="lockwall" class="lock-wall hidden"><i class="ri-lock-2-fill"></i>
-            <h2>This note is locked</h2>
-            <input type="password" id="lockpw" placeholder="Enter password"
-              style="padding:9px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r);color:var(--text);width:200px;text-align:center;outline:none;margin-top:4px;font-size:.85rem">
-            <button class="btn-main" style="width:200px;margin-top:6px" onclick="unlockNote()">Unlock</button>
-          </div>
-          <div id="no-note" class="no-note"><i class="ri-file-text-line"></i>
-            <p>Select a note or create a new one<br><span style="font-size:.75rem">Click <b>+ New</b> to get
-                started</span></p>
-          </div>
-          <div id="editor-ui" class="hidden" style="display:flex;flex-direction:column;flex:1">
-            <div class="e-bar">
-              <button class="tbtn" onclick="insertMD('**')" title="Bold"><i class="ri-bold"></i></button>
-              <button class="tbtn" onclick="insertMD('*')" title="Italic"><i class="ri-italic"></i></button>
-              <button class="tbtn" onclick="insertMD('`')" title="Code"><i class="ri-code-s-slash-line"></i></button>
-              <button class="tbtn" onclick="insertMD('~~')" title="Strikethrough"><i
-                  class="ri-strikethrough"></i></button>
-              <div class="tsep"></div>
-              <button class="tbtn" onclick="toggleFocus()" title="Focus Mode"><i class="ri-focus-3-line"></i></button>
-              <button class="tbtn" id="lockbtn" onclick="toggleLock()" title="Lock note"><i
-                  class="ri-lock-unlock-line"></i></button>
-              <div class="e-info"><span id="wc">0 words</span><span id="ss"><span class="save-dot"></span>Saved</span>
-              </div>
-            </div>
-            <input id="ntitle" placeholder="Note title..." oninput="triggerSave()">
-            <textarea id="nbody" placeholder="Start writing your thoughts..." oninput="handleInput(this)"></textarea>
-          </div>
+        <div class="drive-area" style="position:relative">
+          <div id="dgrid" class="dg"></div>
+          <div class="drop-ov"><i class="ri-upload-cloud-2-line" style="font-size:2rem"></i>Drop files here</div>
         </div>
       </div>
 
       <!-- TRASH VIEW -->
-      <div id="view-trash" class="hidden" style="display:flex;flex-direction:column;height:100%">
+      <div id="view-trash" class="hide" style="display:flex;flex-direction:column;height:100%">
         <div class="topbar">
-          <div class="tb-left"><i class="ri-delete-bin-5-line"></i><span class="path">Trash</span></div>
-          <div class="tb-right">
-            <div class="ib" onclick="emptyTrash()" style="color:var(--danger)"><i
+          <div class="tb-l"><i class="ri-delete-bin-5-line"></i><span class="p">Trash</span></div>
+          <div class="tb-r">
+            <div class="ib" onclick="emptyTrash()" style="color:var(--red)"><i
                 class="ri-delete-bin-fill"></i><span>Empty</span></div>
           </div>
         </div>
         <div class="trash-area" id="tlist"></div>
       </div>
-
     </main>
   </div>
 
-  <div id="ctx" class="ctx hidden"></div>
+  <div id="ctx" class="hide"></div>
+  <div id="modal-root"></div>
   <script src="app.js"></script>
 </body>
 
