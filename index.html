@@ -58,7 +58,6 @@
       <!-- Footer -->
       <div class="side-footer">
         <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
-        <button class="btn-settings" onclick="showSettings()" title="Settings">⚙</button>
       </div>
     </aside>
 
@@ -130,20 +129,6 @@
     </div>
   </div>
 
-  <!-- Settings popup -->
-  <div class="popup-bg" id="settingsPopup">
-    <div class="popup">
-      <h3>⚙ SETTINGS</h3>
-      <label>GEMINI API KEY (for AI Humanizer)</label>
-      <input id="geminiKeyInput" placeholder="Paste your Gemini API key" type="password">
-      <div class="popup-hint">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank"
-          style="color:var(--ac)">aistudio.google.com/apikey</a></div>
-      <div class="popup-btns" style="margin-top:16px">
-        <button class="popup-cancel" onclick="closePopup('settingsPopup')">CANCEL</button>
-        <button class="popup-ok" onclick="saveSettings()">SAVE</button>
-      </div>
-    </div>
-  </div>
 
   <!-- AI loading -->
   <div class="ai-loading" id="aiLoading">
