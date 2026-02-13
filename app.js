@@ -291,19 +291,51 @@ function showMovePopup() {
   document.getElementById('movePopup').classList.add('active');
 }
 
-/* ── AI ── */
+/* ── AI HUMANIZER ── */
 async function runAI(text) {
   if (!text.trim()) { toast('Write something first'); return }
   document.getElementById('editorFoot').textContent = 'AI Working...';
-  toast('AI refining... ✨');
-  await new Promise(r => setTimeout(r, 800));
-  document.getElementById('noteBody').value = humanize(text);
-  autoSave(); toast('Text refined!');
+  toast('AI refining your text... ✨');
+  await new Promise(r => setTimeout(r, 600));
+  const result = humanize(text);
+  document.getElementById('noteBody').value = result;
+  autoSave();
+  const changes = countDiffs(text, result);
+  toast(changes > 0 ? changes + ' improvements made! ✨' : 'Text looks good already!');
 }
+function countDiffs(a, b) { const wa = a.split(/\s+/), wb = b.split(/\s+/); let d = 0; for (let i = 0; i < Math.max(wa.length, wb.length); i++) { if (wa[i] !== wb[i]) d++ } return d }
 function humanize(t) {
+  // Fix spacing
   t = t.replace(/ {2,}/g, ' ');
+  t = t.replace(/\n{3,}/g, '\n\n');
+
+  // Fix common typos/misspellings
+  const typos = [[/\bteh\b/g, 'the'], [/\brecieve\b/gi, 'receive'], [/\bseperate\b/gi, 'separate'], [/\bdefinately\b/gi, 'definitely'], [/\boccured\b/gi, 'occurred'], [/\buntill?\b/gi, 'until'], [/\balot\b/gi, 'a lot'], [/\bcould of\b/gi, 'could have'], [/\bshould of\b/gi, 'should have'], [/\bwould of\b/gi, 'would have'], [/\btheir is\b/gi, 'there is'], [/\btheir are\b/gi, 'there are'], [/\byour welcome\b/gi, 'you\'re welcome'], [/\bits a\b/g, 'it\'s a'], [/\bdont\b/g, 'don\'t'], [/\bcant\b/g, 'can\'t'], [/\bwont\b/g, 'won\'t'], [/\bdidnt\b/g, 'didn\'t'], [/\bisnt\b/g, 'isn\'t'], [/\barent\b/g, 'aren\'t'], [/\bcouldnt\b/g, 'couldn\'t'], [/\bshouldnt\b/g, 'shouldn\'t'], [/\bwouldnt\b/g, 'wouldn\'t'], [/\bthats\b/g, 'that\'s'], [/\bwhats\b/g, 'what\'s'], [/\bheres\b/g, 'here\'s'], [/\btheres\b/g, 'there\'s']];
+  typos.forEach(([p, v]) => { t = t.replace(p, v) });
+
+  // Upgrade weak vocabulary
+  const upgrades = [[/\bvery good\b/gi, 'excellent'], [/\bvery bad\b/gi, 'terrible'], [/\bvery big\b/gi, 'enormous'], [/\bvery small\b/gi, 'tiny'], [/\bvery happy\b/gi, 'thrilled'], [/\bvery sad\b/gi, 'devastated'], [/\bvery tired\b/gi, 'exhausted'], [/\bvery scared\b/gi, 'terrified'], [/\bvery angry\b/gi, 'furious'], [/\bvery important\b/gi, 'crucial'], [/\bvery easy\b/gi, 'effortless'], [/\bvery hard\b/gi, 'challenging'], [/\bvery fast\b/gi, 'rapid'], [/\bvery slow\b/gi, 'sluggish'], [/\bvery old\b/gi, 'ancient'], [/\bvery new\b/gi, 'brand-new'], [/\bvery nice\b/gi, 'delightful'], [/\bvery boring\b/gi, 'tedious'], [/\bvery interesting\b/gi, 'fascinating'], [/\bvery pretty\b/gi, 'gorgeous'], [/\bvery ugly\b/gi, 'hideous'], [/\bvery cold\b/gi, 'freezing'], [/\bvery hot\b/gi, 'scorching'], [/\bvery hungry\b/gi, 'starving'], [/\bvery quiet\b/gi, 'silent'], [/\bvery loud\b/gi, 'deafening'], [/\bvery rich\b/gi, 'wealthy'], [/\bvery poor\b/gi, 'impoverished'], [/\bvery simple\b/gi, 'straightforward'], [/\bvery difficult\b/gi, 'arduous'], [/\bvery strong\b/gi, 'powerful'], [/\bvery weak\b/gi, 'feeble'], [/\bvery bright\b/gi, 'brilliant'], [/\bvery dark\b/gi, 'pitch-black'], [/\bvery clean\b/gi, 'spotless'], [/\bvery dirty\b/gi, 'filthy']];
+  upgrades.forEach(([p, v]) => { t = t.replace(p, v) });
+
+  // Remove filler phrases
+  const fillers = [[/\bbasically,?\s*/gi, ''], [/\bliterally\s+/gi, ''], [/\bactually,?\s*/gi, ''], [/\bhonestly,?\s*/gi, ''], [/\bjust\s+/gi, ''], [/\breally\s+/gi, ''], [/\bsort of\s+/gi, ''], [/\bkind of\s+/gi, 'somewhat '], [/\byou know,?\s*/gi, ''], [/\blike,\s+/gi, ''], [/\bI mean,?\s*/gi, '']];
+  fillers.forEach(([p, v]) => { t = t.replace(p, v) });
+
+  // Improve wordy phrases
+  const wordy = [[/\bin order to\b/gi, 'to'], [/\bdue to the fact that\b/gi, 'because'], [/\bat this point in time\b/gi, 'now'], [/\bin the event that\b/gi, 'if'], [/\bfor the purpose of\b/gi, 'to'], [/\bin spite of the fact that\b/gi, 'although'], [/\bwith regard to\b/gi, 'regarding'], [/\bin the near future\b/gi, 'soon'], [/\ba large number of\b/gi, 'many'], [/\ba lot of\b/gi, 'many'], [/\bgave an explanation\b/gi, 'explained'], [/\bmade a decision\b/gi, 'decided'], [/\btook into consideration\b/gi, 'considered'], [/\bhad a discussion\b/gi, 'discussed'], [/\bis able to\b/gi, 'can'], [/\bhas the ability to\b/gi, 'can'], [/\bin my opinion,?\s*/gi, ''], [/\bi think\b/gi, 'I believe'], [/\bi feel like\b/gi, 'I sense that'], [/\bat the end of the day\b/gi, 'ultimately'], [/\bneedless to say\b/gi, 'clearly'], [/\bit goes without saying\b/gi, 'clearly'], [/\bthe fact that\b/gi, 'that'], [/\bin today's world\b/gi, 'today'], [/\beach and every\b/gi, 'every'], [/\bfirst and foremost\b/gi, 'first']];
+  wordy.forEach(([p, v]) => { t = t.replace(p, v) });
+
+  // Capitalize after sentence endings
   t = t.replace(/(^|[.!?]\s+)([a-z])/g, (m, p, c) => p + c.toUpperCase());
-  [[/\bvery good\b/gi, 'excellent'], [/\bvery bad\b/gi, 'terrible'], [/\bvery big\b/gi, 'enormous'], [/\bvery small\b/gi, 'tiny'], [/\bvery happy\b/gi, 'thrilled'], [/\bin order to\b/gi, 'to'], [/\bdue to the fact that\b/gi, 'because'], [/\ba lot of\b/gi, 'many'], [/\bi think\b/gi, 'I believe'], [/\bteh\b/g, 'the'], [/\brecieve\b/gi, 'receive'], [/\bseperate\b/gi, 'separate'], [/\bdefinately\b/gi, 'definitely']].forEach(([p, v]) => { t = t.replace(p, v) });
+
+  // Fix double punctuation
+  t = t.replace(/([.!?])\1+/g, '$1');
+  t = t.replace(/\s+([.!?,;:])/g, '$1');
+
+  // Trim whitespace
+  t = t.replace(/^ +| +$/gm, '');
+  t = t.replace(/ {2,}/g, ' ');
+
   return t;
 }
 
