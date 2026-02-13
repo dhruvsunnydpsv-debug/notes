@@ -1,14 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personal Vault | Secure Notes & Drive</title>
-  <meta name="description" content="Secure personal vault for notes and files by Dhruv Shah">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet">
+  <title>Personal Vault — Notes & Drive</title>
+  <meta name="description" content="Secure personal vault for notes and file storage by Dhruv Shah">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <link rel="stylesheet" href="style.css">
@@ -16,121 +13,138 @@
 
 <body ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
   <div id="loader">
-    <div class="spinner"></div>
-    <div style="font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:2px">PERSONAL VAULT</div>
+    <div class="spin"></div><span
+      style="font-size:.7rem;color:var(--text3);letter-spacing:1.5px;font-weight:500">PERSONAL VAULT</span>
   </div>
-  <div id="toast"><i id="tic" class="ri-information-line"></i><span id="tm"></span></div>
+  <div id="toast"><i id="t-icon" class="ri-information-line"></i><span id="t-msg"></span></div>
 
+  <!-- AUTH -->
   <div id="auth-screen">
-    <div class="auth-box">
-      <div class="auth-logo">Personal Vault</div>
+    <div class="auth-card">
+      <div class="auth-brand">Personal Vault</div>
       <div class="auth-sub">by Dhruv Shah</div>
-      <div class="iw"><input type="email" id="email" class="inf" placeholder="Email"></div>
-      <div class="iw"><input type="password" id="pass" class="inf" placeholder="Password"
+      <div class="field"><input type="email" id="email" placeholder="Email address"></div>
+      <div class="field"><input type="password" id="pass" placeholder="Password"
           onkeydown="if(event.key==='Enter')login()"></div>
-      <button id="lbtn" class="btn-p" onclick="login()">Sign In</button>
+      <button id="lbtn" class="btn-main" onclick="login()">Sign In</button>
       <p id="aerr" class="auth-err"></p>
     </div>
   </div>
 
+  <!-- APP -->
   <div id="app">
     <nav id="sidebar">
-      <div class="sb-brand"><i class="ri-shield-keyhole-fill" style="color:var(--primary)"></i><span>Vault</span></div>
-      <div class="sb-sec">Main</div>
-      <div class="ni active" data-v="drive" onclick="switchView('drive')"><i class="ri-hard-drive-2-line"></i>Drive
-      </div>
-      <div class="ni" data-v="notes" onclick="switchView('notes')"><i class="ri-file-text-line"></i>Notes</div>
-      <div class="sb-sec">Tools</div>
-      <div class="ni" onclick="openGrammar()"><i class="ri-text"></i>Grammar</div>
-      <div class="ni" data-v="trash" onclick="switchView('trash')"><i class="ri-delete-bin-line"></i>Trash<span
-          class="badge hidden" id="tb">0</span></div>
-      <div class="sb-b">
-        <div class="tt" onclick="toggleTheme()"><i id="ti" class="ri-moon-line"></i><span id="tl">Dark Mode</span></div>
-        <div class="uc">
-          <div class="av" id="uav">U</div>
-          <div style="overflow:hidden">
-            <div class="ue" id="ue">user</div>
-          </div><button class="lb" onclick="logout()" title="Sign out"><i class="ri-logout-box-r-line"></i></button>
+      <div class="s-brand"><i class="ri-shield-keyhole-fill"></i>Personal Vault</div>
+      <div class="s-label">Workspace</div>
+      <div class="s-item active" data-v="drive" onclick="go('drive')"><i class="ri-hard-drive-2-line"></i>Drive</div>
+      <div class="s-item" data-v="notes" onclick="go('notes')"><i class="ri-file-text-line"></i>Notes</div>
+      <div class="s-label">Tools</div>
+      <div class="s-item" onclick="openGrammar()"><i class="ri-quill-pen-line"></i>Grammar Check</div>
+      <div class="s-item" data-v="trash" onclick="go('trash')"><i class="ri-delete-bin-5-line"></i>Trash<span
+          class="cnt hidden" id="tcnt">0</span></div>
+      <div class="s-foot">
+        <div class="s-toggle" onclick="toggleTheme()"><i id="thIcon" class="ri-sun-line"></i><span id="thLabel">Light
+            Mode</span></div>
+        <div class="s-user">
+          <div class="s-av" id="uav">D</div>
+          <div style="overflow:hidden;flex:1">
+            <div class="s-email" id="uemail">user</div>
+          </div>
+          <button class="s-out" onclick="logout()" title="Sign out"><i class="ri-logout-box-r-line"></i></button>
         </div>
       </div>
     </nav>
 
     <main id="main">
+
+      <!-- DRIVE VIEW -->
       <div id="view-drive" style="display:flex;flex-direction:column;height:100%">
-        <div class="tb">
-          <div class="tbl"><i class="ri-home-4-fill" onclick="curPath='/';refreshDrive()"></i><span>/</span><span
-              class="crumb" id="ct">Home</span></div>
-          <div class="tbr">
-            <div class="vt"><button class="active" onclick="setView('grid')"><i
-                  class="ri-grid-fill"></i></button><button onclick="setView('list')"><i
-                  class="ri-list-unordered"></i></button></div>
-            <select class="ss" onchange="setSort(this.value)">
-              <option value="name">Name</option>
-              <option value="date">Date</option>
-              <option value="size">Size</option>
+        <div class="topbar">
+          <div class="tb-left"><i class="ri-home-5-fill" onclick="curPath='/';refreshDrive()"></i><span>/</span><span
+              class="path" id="dpath">Home</span></div>
+          <div class="tb-right">
+            <div class="vbtns"><button class="active" onclick="setView('grid',this)"><i
+                  class="ri-layout-grid-fill"></i></button><button onclick="setView('list',this)"><i
+                  class="ri-list-check"></i></button></div>
+            <select class="sel" onchange="sortBy=this.value;refreshDrive()">
+              <option value="name">Sort: Name</option>
+              <option value="date">Sort: Date</option>
+              <option value="size">Sort: Size</option>
             </select>
-            <div class="ib" onclick="createFolder()" title="New Folder"><i class="ri-folder-add-line"></i></div>
-            <div class="ib" onclick="document.getElementById('fu').click()" title="Upload"><i
-                class="ri-upload-cloud-2-line"></i></div>
-            <input type="file" id="fu" hidden multiple onchange="uploadFiles(this.files)">
+            <div class="ib" onclick="createFolder()"><i class="ri-folder-add-line"></i><span>Folder</span></div>
+            <div class="ib filled" onclick="document.getElementById('fup').click()"><i
+                class="ri-upload-2-line"></i><span>Upload</span></div>
+            <input type="file" id="fup" hidden multiple onchange="uploadFiles(this.files)">
           </div>
         </div>
-        <div class="da">
-          <div id="dg" class="dg"></div>
-          <div class="dz">Drop files to upload</div>
+        <div class="drive-content">
+          <div id="dgrid" class="grid"></div>
+          <div class="drop-overlay"><i class="ri-upload-cloud-2-line" style="font-size:2rem;margin-right:10px"></i>Drop
+            files to upload</div>
         </div>
       </div>
 
+      <!-- NOTES VIEW -->
       <div id="view-notes" class="hidden">
-        <div class="ns">
-          <div class="nh">
-            <div class="nht">
-              <h3>Notes</h3>
-              <div class="ib" onclick="createNote()" title="New Note"><i class="ri-add-line"></i></div>
+        <div class="note-sidebar">
+          <div class="ns-head">
+            <div class="ns-top">
+              <h3>📝 Notes</h3>
+              <div class="ib filled" onclick="createNote()" style="font-size:.8rem"><i
+                  class="ri-add-line"></i><span>New</span></div>
             </div>
-            <input type="text" class="nsr" placeholder="Search notes..." oninput="filterNotes(this.value)">
+            <input class="ns-search" placeholder="Search notes..." oninput="filterNotes(this.value)">
           </div>
-          <div class="folder-tabs" id="ftabs"></div>
-          <div id="notes-list"></div>
+          <div class="ftabs" id="ftabs"></div>
+          <div id="nlist"></div>
         </div>
-        <div class="ea">
-          <div id="lscr" class="ls hidden"><i class="ri-lock-2-fill"></i>
-            <h2>Protected Note</h2>
-            <input type="password" id="upw" class="inf" placeholder="Password"
-              style="width:180px;text-align:center;margin-top:6px">
-            <button class="btn-p" style="width:180px;margin-top:6px" onclick="unlockNote()">Unlock</button>
+        <div class="editor" id="editor">
+          <div id="lockwall" class="lock-wall hidden"><i class="ri-lock-2-fill"></i>
+            <h2>This note is locked</h2>
+            <input type="password" id="lockpw" placeholder="Enter password"
+              style="padding:9px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r);color:var(--text);width:200px;text-align:center;outline:none;margin-top:4px;font-size:.85rem">
+            <button class="btn-main" style="width:200px;margin-top:6px" onclick="unlockNote()">Unlock</button>
           </div>
-          <div class="eb">
-            <button class="tbtn" onclick="insertMD('**')" title="Bold"><i class="ri-bold"></i></button>
-            <button class="tbtn" onclick="insertMD('*')" title="Italic"><i class="ri-italic"></i></button>
-            <button class="tbtn" onclick="insertMD('`')" title="Code"><i class="ri-code-s-slash-line"></i></button>
-            <button class="tbtn" onclick="insertMD('~~')" title="Strikethrough"><i
-                class="ri-strikethrough"></i></button>
-            <div class="tsep"></div>
-            <button class="tbtn" onclick="toggleFocus()" title="Focus Mode"><i class="ri-fullscreen-line"></i></button>
-            <button class="tbtn" id="blk" onclick="toggleLock()" title="Lock"><i
-                class="ri-lock-unlock-line"></i></button>
-            <div class="ei"><span id="wc">0 words</span><span id="ss"><span class="sd"></span>Saved</span></div>
+          <div id="no-note" class="no-note"><i class="ri-file-text-line"></i>
+            <p>Select a note or create a new one<br><span style="font-size:.75rem">Click <b>+ New</b> to get
+                started</span></p>
           </div>
-          <input id="note-title" placeholder="Untitled" oninput="triggerSave()">
-          <textarea id="note-body" placeholder="Start writing..." oninput="handleNoteInput(this)"></textarea>
+          <div id="editor-ui" class="hidden" style="display:flex;flex-direction:column;flex:1">
+            <div class="e-bar">
+              <button class="tbtn" onclick="insertMD('**')" title="Bold"><i class="ri-bold"></i></button>
+              <button class="tbtn" onclick="insertMD('*')" title="Italic"><i class="ri-italic"></i></button>
+              <button class="tbtn" onclick="insertMD('`')" title="Code"><i class="ri-code-s-slash-line"></i></button>
+              <button class="tbtn" onclick="insertMD('~~')" title="Strikethrough"><i
+                  class="ri-strikethrough"></i></button>
+              <div class="tsep"></div>
+              <button class="tbtn" onclick="toggleFocus()" title="Focus Mode"><i class="ri-focus-3-line"></i></button>
+              <button class="tbtn" id="lockbtn" onclick="toggleLock()" title="Lock note"><i
+                  class="ri-lock-unlock-line"></i></button>
+              <div class="e-info"><span id="wc">0 words</span><span id="ss"><span class="save-dot"></span>Saved</span>
+              </div>
+            </div>
+            <input id="ntitle" placeholder="Note title..." oninput="triggerSave()">
+            <textarea id="nbody" placeholder="Start writing your thoughts..." oninput="handleInput(this)"></textarea>
+          </div>
         </div>
       </div>
 
+      <!-- TRASH VIEW -->
       <div id="view-trash" class="hidden" style="display:flex;flex-direction:column;height:100%">
-        <div class="tb">
-          <div class="tbl"><i class="ri-delete-bin-line"></i><span class="crumb">Trash</span></div>
-          <div class="tbr">
-            <div class="ib" onclick="emptyTrash()" title="Empty Trash"><i class="ri-delete-bin-fill"
-                style="color:var(--danger)"></i></div>
+        <div class="topbar">
+          <div class="tb-left"><i class="ri-delete-bin-5-line"></i><span class="path">Trash</span></div>
+          <div class="tb-right">
+            <div class="ib" onclick="emptyTrash()" style="color:var(--danger)"><i
+                class="ri-delete-bin-fill"></i><span>Empty</span></div>
           </div>
         </div>
-        <div class="tl" id="tc"></div>
+        <div class="trash-area" id="tlist"></div>
       </div>
+
     </main>
   </div>
 
-  <div id="ctx" class="ctx-menu hidden"></div>
+  <div id="ctx" class="ctx hidden"></div>
   <script src="app.js"></script>
 </body>
 
