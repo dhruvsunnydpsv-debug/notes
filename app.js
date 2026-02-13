@@ -21,7 +21,7 @@ let curTab = 'notes';
 let folders = [];
 let noteFolder = {};
 let currentUser = null;
-let geminiKey = '';
+let geminiKey = 'AIzaSyA21bmcgzm4f856jRsJNKKT9erTQaE-s_0';
 let searchQuery = '';
 
 /* ── INIT ── */
@@ -269,7 +269,7 @@ function handleBodyInput(ta) {
 function autoSave() {
   document.getElementById('footStatus').textContent = 'Saving...';
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNote, 800);
+  saveTimer = setTimeout(saveNote, 300);
   updateStats();
 }
 
@@ -402,7 +402,24 @@ async function triggerAI() {
 }
 
 async function callGemini(text) {
-  const prompt = 'You are an expert editor. Rewrite the following text to sound more natural, human-written, and polished. Improve vocabulary, sentence structure, flow, and clarity. Remove filler words and redundancies. Keep the same meaning and tone. Return ONLY the rewritten text, nothing else:\n\n' + text;
+  const prompt = `You are a world-class ghostwriter and editor who specializes in making text sound authentically human-written. Your task is to completely rewrite the following text so it reads as if a thoughtful, articulate person naturally wrote it.
+
+Rules you MUST follow:
+1. VARY sentence length dramatically — mix short punchy sentences with longer flowing ones. Real humans don't write uniform sentences.
+2. Use NATURAL transitions — "Look," "Here's the thing," "What's interesting is," "The truth is," "That said," instead of robotic connectors like "Furthermore" or "Moreover."
+3. Replace ALL generic/overused words: "utilize" → "use", "implement" → "set up/build", "leverage" → "take advantage of", "facilitate" → "help", "optimize" → "improve".
+4. Add subtle PERSONALITY — occasional rhetorical questions, mild emphasis, genuine observations. Not over-the-top, just enough to feel real.
+5. ELIMINATE academic/corporate stiffness: no "It is worth noting that", "It should be emphasized", "In conclusion", "As previously mentioned".
+6. Use CONTRACTIONS naturally: "it's", "don't", "we're", "that's", "wouldn't" — real people use contractions.
+7. Break up walls of text into digestible paragraphs. Each paragraph should have ONE clear idea.
+8. KEEP the original meaning, facts, and intent completely intact. Don't add information that wasn't there.
+9. If the text has technical terms, keep them but explain naturally if needed.
+10. The tone should feel like a smart friend explaining something — confident but not arrogant, clear but not dumbed down.
+
+Return ONLY the rewritten text. No explanations, no "Here's the rewritten version", no quotes around it. Just the clean rewritten text.
+
+Text to rewrite:
+${text}`;
   const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + geminiKey, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
