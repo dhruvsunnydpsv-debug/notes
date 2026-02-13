@@ -424,7 +424,7 @@ Return ONLY the rewritten text. No explanations, no "Here's the rewritten versio
       'Authorization': 'Bearer ' + geminiKey
     },
     body: JSON.stringify({
-      model: 'deepseek/deepseek-r1:free',
+      model: 'mistralai/mistral-small-3.1-24b-instruct:free',
       messages: [
         { role: 'system', content: prompt },
         { role: 'user', content: text }
