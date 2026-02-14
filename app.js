@@ -21,7 +21,10 @@ let curTab = 'notes';
 let folders = [];
 let noteFolder = {};
 let currentUser = null;
-let geminiKey = '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';
+const HARDCODED_KEY = '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';
+let geminiKey = HARDCODED_KEY;
+let lastAiTime = 0;
+const AI_COOLDOWN = 10000; // 10 second buffer
 let searchQuery = '';
 
 /* ── INIT ── */
@@ -51,9 +54,31 @@ async function doLogin() {
   err.textContent = '';
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email: AUTH_EMAIL, password: pass });
-    if (error) throw error;
+    if (error) {
+      if (error.message.includes('not found') || error.message.includes('Invalid login')) {
+        err.textContent = 'User not found. Click "NEW ACCOUNT" to register.';
+      } else {
+        throw error;
+      }
+      return;
+    }
     startApp(data.user);
   } catch (ex) { err.textContent = ex.message || 'Login failed' }
+}
+
+async function doSignup() {
+  const pass = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginErr');
+  if (!pass || pass.length < 6) { err.textContent = 'Password must be at least 6 chars'; return }
+  err.textContent = 'Creating account...';
+  try {
+    const { data, error } = await sb.auth.signUp({ email: AUTH_EMAIL, password: pass });
+    if (error) throw error;
+    if (data.user) {
+      toast('Account created! Logging in...');
+      startApp(data.user);
+    }
+  } catch (ex) { err.textContent = ex.message || 'Signup failed' }
 }
 
 async function doLogout() {
@@ -79,12 +104,13 @@ async function loadConfig() {
       const cfg = JSON.parse(text);
       folders = cfg.folders || [];
       noteFolder = cfg.noteFolder || {};
-      geminiKey = cfg.geminiKey || '';
+      if (cfg.geminiKey) geminiKey = cfg.geminiKey;
     }
   } catch (e) {
     folders = JSON.parse(localStorage.getItem('pv_folders') || '[]');
     noteFolder = JSON.parse(localStorage.getItem('pv_notefolder') || '{}');
-    geminiKey = localStorage.getItem('pv_geminikey') || '';
+    const storedKey = localStorage.getItem('pv_geminikey');
+    if (storedKey) geminiKey = storedKey;
     saveConfigNow();
   }
 }
@@ -262,8 +288,109 @@ function openNote(id) {
 }
 
 function handleBodyInput(ta) {
-  if (ta.value.endsWith('aistart')) { ta.value = ta.value.slice(0, -7); triggerAI(); return }
+  const val = ta.value;
+  // Trigger on varieties of aistart or ai start
+  const triggerMatch = val.match(/(aistart|ai start|@ai|\/ai)\s?$/i);
+  if (triggerMatch) {
+    ta.value = val.slice(0, -triggerMatch[0].length);
+    triggerAI();
+    return;
+  }
   autoSave();
+}
+
+/* ── MIC / SPEECH (CLEAN OUTPUT) ── */
+let isRecording = false;
+let recognition;
+let speechBuffer = '';
+let speechFlushTimer = null;
+
+function cleanSpeechText(raw) {
+  let t = raw;
+  // Remove filler words
+  t = t.replace(/\b(um|uh|uhh|umm|hmm|hm|er|err|ah|ahh|like|you know|i mean|basically|so like|well like)\b/gi, '');
+  // Collapse multiple spaces
+  t = t.replace(/  +/g, ' ').trim();
+  // Auto-capitalize first letter
+  t = t.replace(/^\w/, c => c.toUpperCase());
+  // Add period at end if no punctuation
+  if (t.length > 0 && !/[.!?]$/.test(t)) t += '.';
+  return t;
+}
+
+function flushSpeechBuffer() {
+  if (!speechBuffer.trim()) return;
+  const cleaned = cleanSpeechText(speechBuffer);
+  if (!cleaned || cleaned === '.') { speechBuffer = ''; return; }
+  const body = document.getElementById('noteBody');
+  const existing = body.value;
+  const separator = existing.length > 0 && !existing.endsWith('\n') && !existing.endsWith(' ') ? ' ' : '';
+  body.value = existing + separator + cleaned;
+  speechBuffer = '';
+  autoSave();
+}
+
+function toggleMic() {
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) { toast('Speech not supported in this browser'); return; }
+
+  if (isRecording) {
+    recognition.stop();
+    // Flush any remaining buffer
+    if (speechFlushTimer) clearTimeout(speechFlushTimer);
+    flushSpeechBuffer();
+    return;
+  }
+
+  recognition = new Recognition();
+  recognition.continuous = true;
+  recognition.interimResults = false; // Only final results = no pauses/stutters
+  recognition.lang = 'en-US';
+
+  recognition.onstart = () => {
+    isRecording = true;
+    speechBuffer = '';
+    const btn = document.getElementById('micBtn');
+    btn.classList.add('recording');
+    btn.textContent = '⏹️';
+    toast('🎤 Listening... speak naturally');
+  };
+
+  recognition.onend = () => {
+    // Auto-restart if user didn't manually stop (handles browser auto-cutoff)
+    if (isRecording) {
+      try { recognition.start(); } catch (e) { /* ignore */ }
+      return;
+    }
+    const btn = document.getElementById('micBtn');
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+    flushSpeechBuffer();
+    toast('🎤 Mic OFF — text saved');
+  };
+
+  recognition.onresult = (event) => {
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        speechBuffer += ' ' + event.results[i][0].transcript;
+      }
+    }
+    // Debounce flush: wait 1.5s of silence, then flush as one clean sentence
+    if (speechFlushTimer) clearTimeout(speechFlushTimer);
+    speechFlushTimer = setTimeout(flushSpeechBuffer, 1500);
+  };
+
+  recognition.onerror = (e) => {
+    console.error('Speech error:', e.error);
+    if (e.error === 'no-speech' || e.error === 'aborted') return; // ignore timeouts
+    toast('Speech error: ' + e.error);
+    isRecording = false;
+    const btn = document.getElementById('micBtn');
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+  };
+
+  recognition.start();
 }
 
 function autoSave() {
@@ -373,6 +500,15 @@ function showMovePopup() {
    ══════════════════════════════════ */
 async function triggerAI() {
   if (!activeNote) { toast('Open a note first'); return }
+
+  // Rate limit check
+  const now = Date.now();
+  if (now - lastAiTime < AI_COOLDOWN) {
+    const remaining = Math.ceil((AI_COOLDOWN - (now - lastAiTime)) / 1000);
+    toast(`Please wait ${remaining}s before next humanization`);
+    return;
+  }
+
   const text = document.getElementById('noteBody').value;
   if (!text.trim()) { toast('Write something first'); return }
 
@@ -382,24 +518,43 @@ async function triggerAI() {
 
   try {
     let result;
+    let usedAI = false;
     if (geminiKey) {
-      // Use real Gemini AI
-      result = await callGemini(text);
+      try {
+        result = await callGemini(text);
+        usedAI = true;
+      } catch (apiErr) {
+        console.warn('API failed, using local humanizer:', apiErr.message);
+        toast('API unavailable — using local humanizer');
+        result = humanize(text);
+      }
     } else {
-      // Fallback to local humanizer
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 400));
       result = humanize(text);
     }
-    document.getElementById('noteBody').value = result;
-    autoSave();
-    toast(geminiKey ? 'AI rewrite complete! ✨' : 'Text improved! (Add Gemini key in ⚙ for real AI)');
+    if (result && result.trim()) {
+      document.getElementById('noteBody').value = result;
+      lastAiTime = Date.now();
+      autoSave();
+      toast(usedAI ? 'AI rewrite complete! ✨' : 'Text humanized locally ✓');
+    } else {
+      toast('AI returned empty — try again');
+    }
   } catch (e) {
     console.error('AI error:', e);
-    toast('AI error: ' + e.message);
+    toast('Error: ' + e.message);
   } finally {
     document.getElementById('aiLoading').classList.remove('active');
   }
 }
+
+const FREE_MODELS = [
+  'google/gemini-2.0-flash-001',
+  'google/gemini-flash-1.5',
+  'mistralai/mistral-small-24b-instruct-2501:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'deepseek/deepseek-chat-v3-0324:free'
+];
 
 async function callGemini(text) {
   const prompt = `You are a world-class ghostwriter and editor who specializes in making text sound authentically human-written. Your task is to completely rewrite the following text so it reads as if a thoughtful, articulate person naturally wrote it.
@@ -411,35 +566,63 @@ Rules you MUST follow:
 4. Add subtle PERSONALITY — occasional rhetorical questions, mild emphasis, genuine observations. Not over-the-top, just enough to feel real.
 5. ELIMINATE academic/corporate stiffness: no "It is worth noting that", "It should be emphasized", "In conclusion", "As previously mentioned".
 6. Use CONTRACTIONS naturally: "it's", "don't", "we're", "that's", "wouldn't" — real people use contractions.
-7. Break up walls of text into digestible paragraphs. Each paragraph should have ONE clear idea.
-8. KEEP the original meaning, facts, and intent completely intact. Don't add information that wasn't there.
-9. If the text has technical terms, keep them but explain naturally if needed.
-10. The tone should feel like a smart friend explaining something — confident but not arrogant, clear but not dumbed down.
+7. Break up walls of text into digestible paragraphs with varied lengths.
+8. KEEP the original meaning, facts, and intent completely intact. 
+9. Use a tone that is engaging, conversational yet professional, and deeply reflective.
+10. Ensure the output has "burstiness" and "perplexity" characteristic of human writing.
 
 Return ONLY the rewritten text. No explanations, no "Here's the rewritten version", no quotes around it. Just the clean rewritten text.`;
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + geminiKey
-    },
-    body: JSON.stringify({
-      model: 'mistralai/mistral-small-3.1-24b-instruct:free',
-      messages: [
-        { role: 'system', content: prompt },
-        { role: 'user', content: text }
-      ]
-    })
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || 'API error ' + res.status);
+
+  let lastError = '';
+  for (const model of FREE_MODELS) {
+    try {
+      console.log('[AI] Trying model:', model);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + geminiKey,
+          'HTTP-Referer': window.location.href,
+          'X-Title': 'Personal Vault'
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'system', content: prompt },
+            { role: 'user', content: text }
+          ],
+          temperature: 0.7,
+          max_tokens: 4000
+        })
+      });
+      clearTimeout(timeout);
+
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); } catch { lastError = 'Invalid JSON from ' + model; continue; }
+
+      if (!res.ok) {
+        lastError = data?.error?.message || 'HTTP ' + res.status;
+        console.warn('[AI] ' + model + ':', lastError);
+        continue;
+      }
+
+      const content = data?.choices?.[0]?.message?.content;
+      if (content && content.trim().length > 10) {
+        console.log('[AI] Success with', model);
+        return content.trim();
+      }
+      lastError = 'Empty/short response from ' + model;
+    } catch (e) {
+      lastError = e.name === 'AbortError' ? 'Timeout on ' + model : e.message;
+      console.warn('[AI] ' + model + ':', lastError);
+    }
   }
-  const data = await res.json();
-  if (data.choices && data.choices[0] && data.choices[0].message) {
-    return data.choices[0].message.content;
-  }
-  throw new Error('No response from AI');
+  throw new Error(lastError);
 }
 
 function humanize(t) {
