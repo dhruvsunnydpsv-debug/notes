@@ -22,10 +22,7 @@
         <h1>PERSONAL VAULT</h1>
         <div class="sub">Secure · Private · Yours</div>
         <input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
-        <div class="auth-btns">
-          <button class="btn-primary" onclick="doLogin()">UNLOCK</button>
-          <button class="btn-secondary" onclick="doSignup()">NEW ACCOUNT</button>
-        </div>
+        <button class="btn-primary" onclick="doLogin()">UNLOCK</button>
         <div class="login-err" id="loginErr"></div>
       </div>
     </div>
@@ -60,7 +57,7 @@
 
       <!-- Footer -->
       <div class="side-footer">
-        <button class="btn-settings" onclick="showSettings()">SETTINGS</button>
+        <button class="btn-settings" onclick="showSettings()">⚙ SETTINGS</button>
         <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
       </div>
     </aside>
@@ -88,9 +85,6 @@
           <input class="title-input" id="noteTitle" placeholder="Untitled" oninput="autoSave()">
           <div class="editor-acts">
             <button class="icon-btn mic-btn" id="micBtn" onclick="toggleMic()" title="Voice Typing">🎤</button>
-            <button class="icon-btn humanize-btn" onclick="triggerAI()"
-              style="background: var(--ac-primary-glow); color: var(--ac-primary); border-color: var(--ac-primary);">HUMANIZE
-              ✨</button>
             <button class="icon-btn" onclick="showMovePopup()">MOVE</button>
             <button class="icon-btn danger" onclick="deleteActiveNote()">DELETE</button>
           </div>
@@ -140,17 +134,16 @@
   <!-- Settings popup -->
   <div class="popup-bg" id="settingsPopup">
     <div class="popup">
-      <h3>SETTINGS</h3>
-      <div class="popup-label">OpenRouter / Gemini API Key</div>
+      <h3>⚙ SETTINGS</h3>
+      <label>Gemini API Key</label>
       <input id="geminiKeyInput" placeholder="sk-or-v1-...">
-      <div class="popup-hint">Get a free key at openrouter.ai</div>
+      <div class="popup-hint">Get a free key from openrouter.ai</div>
       <div class="popup-btns">
         <button class="popup-cancel" onclick="closePopup('settingsPopup')">CANCEL</button>
         <button class="popup-ok" onclick="saveSettings()">SAVE</button>
       </div>
     </div>
   </div>
-
 
   <!-- AI loading -->
   <div class="ai-loading" id="aiLoading">
