@@ -627,6 +627,7 @@ select {
   border-top: 1px solid var(--bd);
   flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px
 }
 
@@ -636,18 +637,18 @@ select {
   background: transparent;
   border: 1.5px solid var(--bd);
   border-radius: 8px;
-  color: var(--tx2);
+  color: var(--red);
   font-weight: 600;
   font-size: 10px;
   letter-spacing: 1px;
   cursor: pointer;
-  transition: .2s
+  transition: .2s;
+  min-width: 100%
 }
 
 .btn-logout:hover {
-  background: var(--bg3);
-  color: var(--tx);
-  border-color: var(--bd2)
+  background: var(--redg);
+  border-color: rgba(220, 68, 68, .2)
 }
 
 .btn-logout:active {
@@ -655,15 +656,16 @@ select {
 }
 
 .btn-settings {
-  width: 38px;
-  height: 38px;
-  flex-shrink: 0;
+  flex: 1;
+  padding: 10px;
   background: transparent;
   border: 1.5px solid var(--bd);
   border-radius: 8px;
   color: var(--tx2);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1431,50 +1433,6 @@ select {
   }
 }
 
-/* ─── SIDEBAR FOOTER ─── */
-.side-footer {
-  padding: 12px;
-  border-top: 1.5px solid var(--bd);
-  display: flex;
-  gap: 8px
-}
-
-.btn-logout {
-  flex: 1;
-  padding: 10px;
-  background: var(--bg);
-  border: 1.5px solid var(--bd);
-  border-radius: 10px;
-  color: var(--red);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: .8px;
-  cursor: pointer;
-  transition: .2s
-}
-
-.btn-logout:hover {
-  background: var(--redg)
-}
-
-.btn-settings {
-  flex: 1;
-  padding: 10px;
-  background: var(--bg);
-  border: 1.5px solid var(--bd);
-  border-radius: 10px;
-  color: var(--tx2);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: .8px;
-  cursor: pointer;
-  transition: .2s
-}
-
-.btn-settings:hover {
-  background: var(--bg3)
-}
-
 /* ─── MIC BUTTON ─── */
 .mic-btn {
   transition: .2s
@@ -1511,4 +1469,159 @@ select {
   margin-top: 10px;
   min-height: 16px;
   font-weight: 500
+}
+
+/* ─── LOADING OVERLAY ─── */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(248, 247, 244, .7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px)
+}
+
+.loading-overlay.active {
+  display: flex
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--bg4);
+  border-top-color: var(--ac);
+  border-radius: 50%;
+  animation: spin .7s linear infinite
+}
+
+/* ─── SYNC STATUS ─── */
+.sync-dot {
+  font-size: 10px;
+  margin-left: 8px;
+  letter-spacing: .5px
+}
+
+/* ─── FILE ITEMS (Sidebar) ─── */
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  cursor: grab;
+  transition: .15s;
+  user-select: none;
+  gap: 6px
+}
+
+.file-item:hover {
+  background: var(--bg3)
+}
+
+.file-item.dragging {
+  opacity: .35;
+  cursor: grabbing
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0
+}
+
+.file-icon {
+  font-size: 16px;
+  flex-shrink: 0
+}
+
+.file-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tx);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.file-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0
+}
+
+.file-size {
+  font-size: 10px;
+  color: var(--tx3)
+}
+
+.file-acts {
+  display: none;
+  gap: 3px;
+  flex-shrink: 0
+}
+
+.file-item:hover .file-acts {
+  display: flex
+}
+
+.file-act-btn {
+  width: 26px;
+  height: 26px;
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: .15s
+}
+
+.file-act-btn:hover {
+  background: var(--bg4)
+}
+
+.file-act-btn.danger:hover {
+  background: var(--redg);
+  color: var(--red)
+}
+
+/* ─── GHOST DRAGGING ─── */
+.ghost-dragging {
+  opacity: .8;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+  border-radius: 8px;
+  background: var(--bg2) !important;
+  border: 2px solid var(--ac) !important
+}
+
+/* ─── FOLDER GRID HEADER ─── */
+.folder-grid-header {
+  grid-column: 1 / -1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tx2);
+  padding: 8px 0 4px;
+  margin-top: 8px
+}
+
+.folder-grid-header:first-child {
+  margin-top: 0
+}
+
+/* ─── POPUP OPT ACTIVE ─── */
+.popup-opt.active {
+  background: var(--acg);
+  border-color: var(--ac);
+  color: var(--ac);
+  font-weight: 600
 }

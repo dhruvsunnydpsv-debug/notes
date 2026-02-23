@@ -14,6 +14,9 @@
 
 <body>
 
+  <!-- Sidebar overlay (mobile) -->
+  <div class="side-overlay" id="sideOverlay" onclick="closeSidebar()"></div>
+
   <!-- LOGIN -->
   <div id="loginScreen" class="screen active">
     <div class="login-wrap">
@@ -21,7 +24,8 @@
         <div class="login-icon">🔒</div>
         <h1>PERSONAL VAULT</h1>
         <div class="sub">Secure · Private · Yours</div>
-        <input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+        <input type="password" id="loginPass" placeholder="Enter password" autocomplete="off"
+          onkeydown="if(event.key==='Enter')doLogin()">
         <button class="btn-primary" onclick="doLogin()">UNLOCK</button>
         <div class="login-err" id="loginErr"></div>
       </div>
@@ -30,92 +34,103 @@
 
   <!-- APP -->
   <div id="appScreen" class="screen">
-    <div class="side-overlay" id="sideOverlay" onclick="closeSidebar()"></div>
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-tabs">
-        <button class="tab-btn active" id="tabNotes" onclick="switchTab('notes')">NOTES</button>
-        <button class="tab-btn" id="tabFiles" onclick="switchTab('files')">FILES</button>
-      </div>
-
-      <!-- Notes tab -->
-      <div class="tab-content active" id="tcNotes">
-        <div class="search-wrap">
-          <span class="search-icon">🔍</span>
-          <input class="search-input" id="searchInput" placeholder="Search notes..." oninput="searchNotes(this.value)">
+    <div class="app-layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-tabs">
+          <button class="tab-btn active" id="tabNotes" onclick="switchTab('notes')">NOTES</button>
+          <button class="tab-btn" id="tabFiles" onclick="switchTab('files')">FILES</button>
         </div>
-        <div class="side-actions">
-          <button class="btn-new" onclick="newNote()">+ NOTE</button>
-          <button class="btn-fold" onclick="newFolder()">+ FOLDER</button>
+
+        <!-- Notes tab -->
+        <div class="tab-content active" id="tcNotes">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" id="searchInput" placeholder="Search notes..." oninput="searchNotes(this.value)">
+          </div>
+          <div class="side-actions">
+            <button class="btn-new" onclick="newNote()">+ NOTE</button>
+            <button class="btn-fold" onclick="newFolder('note')">+ FOLDER</button>
+          </div>
+          <div class="side-list" id="notesList"></div>
         </div>
-        <div class="side-list" id="notesList"></div>
-      </div>
 
-      <!-- Files tab -->
-      <div class="tab-content" id="tcFiles">
-        <div class="side-list" id="filesList"></div>
-      </div>
-
-      <!-- Footer -->
-      <div class="side-footer">
-        <button class="btn-settings" onclick="showSettings()">⚙ SETTINGS</button>
-        <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
-      </div>
-    </aside>
-
-    <main class="main-content">
-      <!-- Empty state -->
-      <div class="empty-state" id="emptyState">
-        <div class="empty-state-head">
-          <button class="menu-toggle" onclick="openSidebar()">☰</button>
+        <!-- Files tab -->
+        <div class="tab-content" id="tcFiles">
+          <div class="side-actions">
+            <button class="btn-new" onclick="document.getElementById('fileInput').click()">+ UPLOAD FILE</button>
+            <button class="btn-fold" onclick="newFolder('file')">+ FOLDER</button>
+          </div>
+          <input type="file" id="fileInput" style="display:none" multiple onchange="handleFileUpload(event)">
+          <div class="side-list" id="filesList"></div>
         </div>
-        <div class="empty-icon">📝</div>
-        <h2>Select a note or create a new one</h2>
-        <div class="hint">Use the sidebar to get started</div>
-        <div class="shortcut-hints">
-          <div class="shortcut-hint"><kbd>Ctrl</kbd> + <kbd>N</kbd> New note</div>
-          <div class="shortcut-hint"><kbd>Ctrl</kbd> + <kbd>S</kbd> Save note</div>
-          <div class="shortcut-hint"><kbd>Ctrl</kbd> + <kbd>K</kbd> Search</div>
-        </div>
-      </div>
 
-      <!-- Note editor -->
-      <div class="note-editor" id="noteEditor" style="display:none">
-        <div class="editor-head">
-          <button class="menu-toggle" onclick="openSidebar()">☰</button>
-          <input class="title-input" id="noteTitle" placeholder="Untitled" oninput="autoSave()">
-          <div class="editor-acts">
-            <button class="icon-btn mic-btn" id="micBtn" onclick="toggleMic()" title="Voice Typing">🎤</button>
-            <button class="icon-btn" onclick="showMovePopup()">MOVE</button>
-            <button class="icon-btn danger" onclick="deleteActiveNote()">DELETE</button>
+        <!-- Footer -->
+        <div class="side-footer">
+          <button class="btn-settings" onclick="showSettings()">⚙ SETTINGS</button>
+          <button class="btn-settings" onclick="handleChangePassword()">🔑 CHANGE PASSWORD</button>
+          <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <!-- Empty state -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-state-head">
+            <button class="menu-toggle" onclick="openSidebar()">☰</button>
+          </div>
+          <div class="empty-icon">📝</div>
+          <h2>Select a note or create a new one</h2>
+          <div class="hint">Use the sidebar to get started</div>
+          <div class="shortcut-hints">
+            <div class="shortcut-hint"><kbd>Ctrl</kbd> + <kbd>N</kbd> New note</div>
+            <div class="shortcut-hint"><kbd>Ctrl</kbd> + <kbd>S</kbd> Save note</div>
+            <div class="shortcut-hint"><kbd>Ctrl</kbd> + <kbd>K</kbd> Search</div>
           </div>
         </div>
-        <textarea class="note-body" id="noteBody" placeholder="Start writing..."
-          oninput="handleBodyInput(this)"></textarea>
-        <div class="editor-foot" id="editorFoot">
-          <span id="footStats">0 words · 0 chars</span>
-          <span class="status" id="footStatus">Saved</span>
-        </div>
-      </div>
 
-      <!-- Files view -->
-      <div class="files-view" id="filesView" style="display:none">
-        <div class="files-head">
-          <button class="menu-toggle" onclick="openSidebar()">☰</button>
-          <h2>Your Files</h2>
-          <label class="upload-btn-main" for="fileInput">⬆ UPLOAD</label>
-          <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
+        <!-- Note editor -->
+        <div class="note-editor" id="noteEditor" style="display:none">
+          <div class="editor-head">
+            <button class="menu-toggle" onclick="openSidebar()">☰</button>
+            <input class="title-input" id="noteTitle" placeholder="Untitled" oninput="handleNoteChange()">
+            <div class="editor-acts">
+              <button class="icon-btn mic-btn" id="micBtn" onclick="toggleMic()" title="Voice Typing">🎤</button>
+              <button class="icon-btn" onclick="showFolderPopup()">MOVE</button>
+              <button class="icon-btn danger" onclick="deleteActiveNote()">DELETE</button>
+            </div>
+          </div>
+          <textarea class="note-body" id="noteBody" placeholder="Start writing..."
+            oninput="handleBodyInput(this)"></textarea>
+          <div class="editor-foot" id="editorFoot">
+            <span id="footStats">0 words · 0 chars</span>
+            <span class="status" id="footStatus">Saved</span>
+            <span class="sync-dot" id="syncStatusDot"></span>
+          </div>
         </div>
-        <div class="files-grid" id="filesGrid"></div>
-      </div>
-    </main>
+
+        <!-- Files view -->
+        <div class="files-view" id="filesView" style="display:none">
+          <div class="files-head">
+            <button class="menu-toggle" onclick="openSidebar()">☰</button>
+            <h2>Your Files</h2>
+          </div>
+          <div class="files-grid" id="filesGrid"></div>
+        </div>
+      </main>
+    </div>
   </div>
 
-  <!-- Move popup -->
-  <div class="popup-bg" id="movePopup">
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Folder move popup -->
+  <div class="popup-bg" id="folderPopup">
     <div class="popup">
       <h3>MOVE TO FOLDER</h3>
-      <div class="popup-list" id="moveList"></div>
-      <button class="popup-cancel" onclick="closePopup('movePopup')">CANCEL</button>
+      <div class="popup-list" id="folderPopupList"></div>
+      <button class="popup-cancel" onclick="closeFolderPopup()">CANCEL</button>
     </div>
   </div>
 
@@ -152,9 +167,9 @@
   </div>
 
   <!-- Upload progress -->
-  <div class="upload-bar" id="uploadBar">
-    <div class="upload-track"></div>
-    <div class="upload-txt" id="uploadTxt">Uploading...</div>
+  <div class="upload-bar" id="uploadProgress">
+    <div class="upload-track" id="uploadProgressBar"></div>
+    <div class="upload-txt" id="uploadProgressText">Uploading...</div>
   </div>
 
   <!-- Toast -->
